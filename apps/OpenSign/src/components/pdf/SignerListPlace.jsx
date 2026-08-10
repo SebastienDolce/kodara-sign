@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 
 function SignerListPlace(props) {
   const { t } = useTranslation();
+
   const handleAddRecipient = () => {
     props?.setIsAddSigner(true);
     props.setIsTour && props.setIsTour(false);

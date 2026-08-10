@@ -27,7 +27,7 @@
     "@signpdf/placeholder-pdf-lib": "^3.3.0",
     "@signpdf/signer-p12": "^3.3.0",
     "@signpdf/signpdf": "^3.3.0",
-    "axios": "^1.16.0",
+    "axios": "^1.18.0",
     "coherentpdf": "^2.5.5",
     "cors": "^2.8.6",
     "date-fns-tz": "^3.2.0",
@@ -40,14 +40,14 @@
     "mailgun.js": "^13.0.0",
     "moment": "^2.30.1",
     "mongodb": "^7.2.0",
-    "multer": "^2.2.0",
+    "multer": "^2.1.1",
     "multer-s3": "^3.0.1",
     "node-forge": "^1.3.3",
     "nodemailer": "^8.0.7",
     "p-limit": "^7.3.0",
-    "parse": "^8.6.0",
+    "parse": "^8.1.0",
     "parse-dbtool": "^1.2.0",
-    "parse-server": "^8.6.84",
+    "parse-server": "^8.6.77",
     "parse-server-api-mail-adapter": "^5.0.5",
     "pdf-lib": "^1.17.1",
     "posthog-node": "^5.21.2",
@@ -68,13 +68,20 @@
     "prettier": "^3.8.3"
   },
   "overrides": {
+    "brace-expansion": ">=2.1.2",
     "ws": "$ws",
     "parse": "$parse",
     "form-data": "$form-data",
     "@parse/push-adapter": "$@parse/push-adapter",
     "fast-xml-builder": "1.2.0",
     "protobufjs": ">=7.6.3",
-    "tmp": ">=0.2.7"
+    "tmp": ">=0.2.7",
+    "decompress": "npm:@xhmikosr/decompress@^11.1.4",
+    "tar": "^7.5.19",
+    "websocket-driver": ">=0.7.5",
+    "js-yaml": "^3.15.0",
+    "lodash": "^4.18.0",
+    "undici": "^7.29.0"
   },
   "engines": {
     "node": "18 || 20 || 22"

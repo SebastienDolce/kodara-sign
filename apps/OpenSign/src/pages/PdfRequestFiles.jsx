@@ -230,6 +230,355 @@ function PdfRequestFiles(
     }
   }, [redirectTimeLeft, isredirectCanceled, redirectUrl]);
 
+      if (!docId || !signerObjId) {
+        throw new Error(t("something-went-wrong-mssg"));
+      }
+      const res = await Parse.Cloud.run("verifyAccessCode", {
+        docId,
+        signerObjId,
+        code
+      });
+      if (res?.verified) {
+        setAccessCodeVerified(true);
+        setAccessCodeRequired(false);
+        return true;
+      }
+      throw new Error(t("access-code-invalid"));
+    } catch (err) {
+      // Re-throw so the modal can render the message inline.
+      throw new Error(
+        err?.message === "Incorrect access code."
+          ? t("access-code-invalid")
+          : err?.message || t("access-code-invalid")
+      );
+    } finally {
+      setAccessCodeLoader(false);
+    }
+  };
+  const handleNavigation = () => {
+    window.location.href = subscriptionpath;
+  };
+  async function checkIsSubscribed(extUserId, contactId) {
+    const isGuestSign = isGuestSignFlow || false;
+    const isPublic = props.templateId ? true : false;
+    const res = await fetchSubscription(
+      extUserId,
+      contactId,
+      isGuestSign,
+      isPublic
+    );
+    const plan = res.plan;
+    const billingDate = res?.billingDate;
+    const status = res?.status;
+
+    if (plan === "freeplan") {
+      return true;
+    } else if (billingDate) {
+      if (new Date(billingDate) > new Date()) {
+        if (!isSandbox) {
+          setPlanCode(plan);
+        }
+        setIsSubscribed(true);
+        return true;
+      } else {
+        if (isGuestSign) {
+          setIsSubscriptionExpired(true);
+        } else {
+          handleNavigation(plan);
+        }
+      }
+    } else if (isGuestSign) {
+      if (status) {
+        if (!isSandbox) {
+          setPlanCode(plan);
+        }
+        setIsSubscribed(true);
+        return true;
+      } else {
+        setIsSubscriptionExpired(true);
+      }
+    } else {
+      if (isGuestSign) {
+        setIsSubscriptionExpired(true);
+      } else {
+        handleNavigation(res.plan);
+      }
+    }
+  }
+  // `checkIsSubscribedPublic` this function will check owner subscription and only call in public template flow
+  async function checkIsSubscribedPublic(extUserId) {
+    const isPublic = props.templateId ? true : false;
+    const res = await fetchSubscription(extUserId, "", false, isPublic);
+    const plan = res.plan;
+    const billingDate = res?.billingDate;
+
+    if (plan === "freeplan") {
+      setIsSubscriptionExpired(false);
+    } else if (billingDate) {
+      if (new Date(billingDate) > new Date()) {
+        if (!isSandbox) {
+          setPlanCode(plan);
+        }
+        setIsSubscribed(true);
+      } else {
+        setIsSubscriptionExpired(true);
+      }
+    } else {
+      setIsSubscriptionExpired(true);
+    }
+  }
+
+  //function for get document details for perticular signer with signer'object id
+  //whenever change anything in this function check react/angular packages also in plan js
+  const getTemplateDetails = async () => {
+    try {
+      const params = { templateId: props.templateId, ispublic: true };
+      const templateDeatils = await axios.post(
+        `${localStorage.getItem("baseUrl")}functions/getTemplate`,
+        params,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "X-Parse-Application-Id": localStorage.getItem("parseAppId"),
+            sessiontoken: localStorage.getItem("accesstoken")
+          }
+        }
+      );
+      const documentData = templateDeatils?.data?.result
+        ? [templateDeatils?.data?.result]
+        : [];
+      if (documentData && documentData[0]?.error) {
+        props?.setTemplateStatus &&
+          props?.setTemplateStatus({ status: "Invalid" });
+        throw new Error("error: Invalid TemplateId");
+      } else if (documentData && documentData.length > 0) {
+        await checkIsSubscribedPublic(documentData[0]?.ExtUserPtr?.objectId);
+        hideLiveChatWidget(
+          documentData?.[0]?.ExtUserPtr?.TenantId?.HideLiveChatForSigners
+        );
+        if (documentData[0]?.IsPublic) {
+          const prefillImg = await utils?.savePrefillImg(
+            documentData[0]?.Placeholders
+          );
+          if (prefillImg && Array.isArray(prefillImg)) {
+            prefillImg.forEach((img) => {
+              dispatch(setPrefillImg(img));
+            });
+          }
+          // Fetch prefill data from contracts_templateLinks for public mode and merge into local state
+          // so that prefill values saved by the admin are available without modifying the template
+          try {
+            const templateLinksQuery = new Parse.Query(
+              "contracts_templateLinks"
+            );
+            const templatePtr = Parse.Object.extend(
+              "contracts_Template"
+            ).createWithoutData(props.templateId);
+            templateLinksQuery.equalTo("TemplatePtr", templatePtr);
+            templateLinksQuery.equalTo("Type", "public");
+            const templateLink = await templateLinksQuery.first();
+            if (templateLink) {
+              const savedPrefillPlaceholders =
+                templateLink.get("Placeholders") || [];
+
+              if (savedPrefillPlaceholders?.length) {
+                // Replace the prefill role in documentData prefill placeholders with the saved prefill details
+                const updatedPlaceholders = documentData[0].Placeholders.map(
+                  (ph) => {
+                    if (ph.Role === "prefill") {
+                      return {
+                        ...ph,
+                        placeHolder: savedPrefillPlaceholders // ✅ only update this field
+                      };
+                    }
+                    return ph;
+                  }
+                );
+
+                documentData[0] = {
+                  ...documentData[0],
+                  Placeholders: updatedPlaceholders
+                };
+
+                // Re-run savePrefillImg with the updated placeholders so image widgets are loaded correctly
+                const updatedPrefillImg = await utils?.savePrefillImg(
+                  documentData[0]?.Placeholders
+                );
+
+                if (updatedPrefillImg && Array.isArray(updatedPrefillImg)) {
+                  updatedPrefillImg.forEach((img) => {
+                    dispatch(setPrefillImg(img));
+                  });
+                }
+              }
+            }
+          } catch (e) {
+            console.error("Error fetching templateLinks for public:", e);
+          }
+          const appname =
+            documentData?.[0]?.ExtUserPtr?.TenantId?.WhiteLabelAppName ||
+            appName;
+          localStorage.setItem("appname", appname);
+          //handle condition when someone use plan js then setTemplateStatus is not supporting
+          props?.setTemplateStatus &&
+            props?.setTemplateStatus({ status: "Success" });
+          const url =
+            documentData[0] &&
+            (documentData[0]?.SignedUrl || documentData[0]?.URL);
+          setSendInOrder(documentData[0]?.SendinOrder || false);
+          setExtUserId(documentData[0]?.ExtUserPtr?.objectId);
+          setOwner(documentData?.[0]?.ExtUserPtr);
+          // Collect all assigned widget IDs. If modification is enabled, the user can only add or modify new widgets—not the ones already assigned.
+          if (documentData[0]?.AllowModifications) {
+            const removePrefill = documentData[0]?.Placeholders.filter(
+              (x) => x.Role !== "prefill"
+            );
+            const firstRolePH = removePrefill[0];
+            const widgetId = firstRolePH.placeHolder?.flatMap((page) => {
+              return page.pos.map((item) => item.key);
+            });
+            setAssignedWidgetId(widgetId);
+          }
+          if (url) {
+            const base64Pdf = await getBase64FromUrl(url);
+            if (base64Pdf) {
+              setPdfBase64Url(base64Pdf);
+            }
+          } else {
+            setHandleError(t("something-went-wrong-mssg"));
+          }
+          //handle allowed signature type
+          const userSignatureType =
+            documentData?.[0]?.ExtUserPtr?.SignatureType || signatureTypes;
+          const docSignTypes =
+            documentData?.[0]?.SignatureType || userSignatureType;
+          setSignatureType(docSignTypes);
+          const removePrefill =
+            documentData[0]?.Placeholders.filter((x) => x.Role !== "prefill") ||
+            [];
+          const isAttachAllSigner =
+            removePrefill?.length > 0 &&
+            removePrefill?.every(
+              (data) => data?.signerObjId && data?.Role !== "prefill"
+            );
+          const isEnableOTP = documentData?.[0]?.IsEnableOTP || false;
+          if (isAttachAllSigner) {
+            if (isEnableOTP) {
+              setIsPublicTemplate(true);
+            } else {
+              setCurrentSigner(true);
+              setSignerObjectId(documentData?.[0]?.Signers?.[0]?.objectId);
+            }
+          } else {
+            setIsPublicTemplate(true);
+          }
+
+          setUniqueId(removePrefill[0]?.Id);
+          let placeholdersOrSigners = [];
+          for (const placeholder of removePrefill) {
+            //`emailExist` variable to handle condition for quick send flow and show unsigned signers list
+            const signerIdExist = placeholder?.signerObjId;
+            if (signerIdExist) {
+              const getSignerData = documentData[0]?.Signers?.find(
+                (data) => data.objectId === placeholder?.signerObjId
+              );
+              placeholdersOrSigners.push(getSignerData);
+            } else {
+              placeholdersOrSigners.push(placeholder);
+            }
+          }
+          const getVacantRole = documentData[0]?.Placeholders?.filter(
+            (x) => !x?.signerObjId && x.Role !== "prefill"
+          );
+          if (getVacantRole?.length > 0) {
+            setVacantRole(getVacantRole);
+            setFormData(
+              getVacantRole.map(() => ({
+                name: "",
+                email: "",
+                phone: "",
+                id: ""
+              }))
+            );
+          }
+          if (removePrefill && removePrefill.length > 0) {
+            //check first role attached signer or not
+            const getfirstSignerObjId = removePrefill[0]?.signerObjId;
+            //save isSignerFirstRole true if first role attached signer
+            if (getfirstSignerObjId) {
+              setIsSignerFirstRole(true);
+            }
+          }
+          setUnSignedSigners(placeholdersOrSigners);
+          setPdfDetails(documentData);
+          setSignerPos(
+            updateDateWidgetsRes(documentData[0], removePrefill[0]?.Id)
+          );
+          setIsLoading({ isLoad: false });
+        } else {
+          props?.setTemplateStatus &&
+            props?.setTemplateStatus({ status: "Private" });
+          setIsLoading({ isLoad: false });
+          // setHandleError(t("something-went-wrong-mssg"));
+          setHandleError(t("this-template-is-not-public"));
+          console.error("error: TemplateId is not public");
+          return;
+        }
+      } else {
+        props?.setTemplateStatus &&
+          props?.setTemplateStatus({ status: "Invalid" });
+        setIsLoading({ isLoad: false });
+        setHandleError(t("invalid-templateid"));
+        console.error("error: Invalid TemplateId");
+        return;
+      }
+    } catch (err) {
+      setIsLoading({ isLoad: false });
+      if (err?.response?.data?.code === 101) {
+        setHandleError(t("error-template"));
+      } else if (err?.message?.includes("Invalid")) {
+        setHandleError(t("invalid-templateid"));
+      } else {
+        setHandleError(t("something-went-wrong-mssg"));
+      }
+      console.error("error: Invalid TemplateId", err);
+      return;
+    }
+  };
+
+  const addsigner = async (contact) => {
+    try {
+      const baseURL = localStorage.getItem("baseUrl");
+      const url = `${baseURL}functions/publicsavecontact`;
+      const data = contact;
+      const headers = {
+        "Content-Type": "application/json",
+        "X-Parse-Application-Id": localStorage.getItem("parseAppId")
+      };
+      await axios.post(url, data, { headers });
+    } catch (err) {
+      console.log("Err", err);
+      setHandleError(t("something-went-wrong-mssg"));
+    }
+  };
+
+  // `checkIfAlreadySubmitted` function will check whether signer already submitted the offline signed document to avoid multiple submission for same document by same signer.
+  const checkIfAlreadySubmitted = async (documentId, contactId) => {
+    try {
+      const { offlineSigned } = await Parse.Cloud.run(
+        "checkofflinesubmission",
+        { documentId, contactId }
+      );
+      if (offlineSigned) {
+        setHandleError(t("offline-already-submitted-body"));
+        return true;
+      }
+    } catch (error) {
+      console.error("Error checking offline submission:", error);
+    }
+    return false;
+  };
+
 
   const fetchTenantDetails = async (contactId) => {
     const user = JSON.parse(
@@ -1422,6 +1771,151 @@ function PdfRequestFiles(
   const handleCloseTour = () => {
     closeTour();
     setIsReqSignTourDisabled(true);
+  };
+      }
+      setIsUiLoading(false);
+    } catch (e) {
+      console.log("e", e);
+      if (
+        e?.response?.data?.error === "Insufficient Credit" ||
+        e?.response?.data?.error === "Plan expired"
+      ) {
+        handleCloseOtp();
+        setIsAlert({
+          title: t("insufficient-credits-title"),
+          isShow: true,
+          alertMessage: t("insufficient-credits-mssg", { appName })
+        });
+      } else {
+        handleCloseOtp();
+        setIsAlert({
+          title: "Error",
+          isShow: true,
+          alertMessage: t("something-went-wrong-mssg")
+        });
+      }
+    }
+  };
+  const handleInputChange = (e) => {
+    let { name, value } = e.target;
+    const updatedForm = [...formData];
+    if (name === "email") {
+      value = value?.toLowerCase()?.replace(/\s/g, "");
+    }
+    updatedForm[currentIndex] = {
+      ...updatedForm[currentIndex],
+      [name]: value,
+      id: vacantRole[currentIndex]?.Id
+    };
+    setFormData(updatedForm);
+  };
+  const SendOtp = async (app, email, isLoad) => {
+    if (isLoad) {
+      setLoading(true);
+      setIsOtp(true);
+    }
+    const appName = app || localStorage.getItem("appname") || "OpenSign™";
+    try {
+      const params = {
+        email: email,
+        appName: appName
+      };
+      const Otp = await axios.post(
+        `${localStorage.getItem("baseUrl")}/functions/SendOTPMailV1`,
+        params,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "X-Parse-Application-Id": localStorage.getItem("parseAppId")
+          }
+        }
+      );
+      if (Otp) {
+        setIsOtp(true);
+        setLoading(false);
+      }
+    } catch (error) {
+      console.log("error in verify otp in public-sign", error);
+      setIsAlert({
+        title: "Error",
+        isShow: true,
+        alertMessage: t("something-went-wrong-mssg")
+      });
+    }
+  };
+
+  //verify OTP send on via email
+  const VerifyOTP = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    const serverUrl =
+      localStorage.getItem("baseUrl") && localStorage.getItem("baseUrl");
+    const parseId =
+      localStorage.getItem("parseAppId") && localStorage.getItem("parseAppId");
+    if (otp) {
+      try {
+        let url = `${serverUrl}/functions/AuthLoginAsMail`;
+        const headers = {
+          "Content-Type": "application/json",
+          "X-Parse-Application-Id": parseId
+        };
+        let contact;
+        if (isSignerFirstRole) {
+          const firstSigner = pdfDetails?.[0]?.Signers?.[0];
+          contact = { email: firstSigner.Email, name: firstSigner.Name };
+        } else {
+          contact = formData[0];
+        }
+
+        let body = { email: contact.email, otp: otp };
+        let user = await axios.post(url, body, { headers: headers });
+        if (user.data.result === "Invalid Otp") {
+          alert(t("invalid-otp"));
+          setLoading(false);
+        } else if (user.data.result === "user not found!") {
+          alert(t("user-not-found"));
+          setLoading(false);
+        } else {
+          let _user = user.data.result;
+          const parseId = localStorage.getItem("parseAppId");
+          if (_user) {
+            localStorage.setItem("accesstoken", _user?.sessionToken);
+            localStorage.setItem("UserInformation", JSON.stringify(_user));
+            localStorage.setItem(
+              `Parse/${parseId}/currentUser`,
+              JSON.stringify(_user)
+            );
+          }
+          await Parse.User.become(_user.sessionToken);
+          const contractUserDetails = await contractUsers();
+          if (contractUserDetails && contractUserDetails.length > 0) {
+            localStorage.setItem(
+              "Extand_Class",
+              JSON.stringify(contractUserDetails)
+            );
+          }
+          setLoading(false);
+          setIsLoading({ isLoad: false });
+          setIsPublicContact(false);
+          setIsPublicTemplate(false);
+          const removePrefill = signerPos.filter((x) => x.Role !== "prefill");
+          const getSignerObjId = removePrefill[0]?.signerObjId;
+          setSignerObjectId(getSignerObjId);
+          setCurrentSigner(true);
+          setSignerPos(updateDateWidgetsRes(pdfDetails[0], getSignerObjId));
+        }
+      } catch (error) {
+        console.log("err ", error);
+      }
+    } else {
+      alert(t("enter-otp-alert"));
+    }
+  };
+  const handleCloseOtp = () => {
+    setIsPublicContact(false);
+    setLoading(false);
+    setIsOtp(false);
+    setOtp();
   };
 
   const clickOnZoomIn = () => {
