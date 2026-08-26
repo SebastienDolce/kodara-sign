@@ -19,7 +19,9 @@ const buildPreview = (html, css) => {
     FORBID_ATTR: ["srcdoc"]
   });
   const safeCss = String(css || "").replace(/<\/style/gi, "<\\/style");
-  return `<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;min-height:100%;}${safeCss}</style></head><body>${safeHtml}</body></html>`;
+  const csp =
+    "default-src 'none'; img-src data: blob:; style-src 'unsafe-inline'; font-src data:;";
+  return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${csp}"><style>html,body{margin:0;min-height:100%;}${safeCss}</style></head><body>${safeHtml}</body></html>`;
 };
 
 export default function HtmlTemplateEditor() {
@@ -254,7 +256,9 @@ export default function HtmlTemplateEditor() {
           <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <div>
               <div className="font-medium">Preview</div>
-              <div className="text-xs opacity-60">Scripts are disabled.</div>
+              <div className="text-xs opacity-60">
+                Scripts and remote resource loads are disabled.
+              </div>
             </div>
             <div className="join">
               <button
