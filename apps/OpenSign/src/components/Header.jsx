@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import dp from "../assets/images/dp.png";
 import FullScreenButton from "./FullScreenButton";
-import ThemeToggle from "./ThemeToggle";
 import { useNavigate } from "react-router";
 import Parse from "parse";
 import { useWindowSize } from "../hook/useWindowSize";
@@ -25,7 +24,6 @@ const Header = ({ isConsole, setIsLoggingOut }) => {
   const image = localStorage.getItem("profileImg") || dp;
   const [isOpen, setIsOpen] = useState(false);
   const [applogo, setAppLogo] = useState("");
-  const [isDarkTheme, setIsDarkTheme] = useState(false);
 
   const toggleDropdown = () => {
     setIsOpen(!isOpen);
@@ -92,7 +90,6 @@ const Header = ({ isConsole, setIsLoggingOut }) => {
     navigate("/");
   };
 
-  // handle to close profile drop down menu onclick screen
   useEffect(() => {
     const closeMenuOnOutsideClick = (e) => {
       if (isOpen && !e.target.closest("#profile-menu")) {
@@ -107,28 +104,8 @@ const Header = ({ isConsole, setIsLoggingOut }) => {
     };
   }, [isOpen]);
 
-  useEffect(() => {
-    const updateThemeStatus = () => {
-      const darkTheme =
-        document.documentElement.getAttribute("data-theme") === "opensigndark";
-      setIsDarkTheme(darkTheme);
-    };
-    updateThemeStatus();
-
-    const observer = new MutationObserver(() => {
-      updateThemeStatus();
-    });
-
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["data-theme"]
-    });
-
-    return () => observer.disconnect();
-  }, []);
-
   const displayedLogo =
-    isDarkTheme && applogo === appInfo.applogo ? appInfo.darkLogo : applogo;
+    applogo === appInfo.applogo ? appInfo.darkLogo : applogo;
 
   return (
     <>
@@ -236,16 +213,6 @@ const Header = ({ isConsole, setIsLoggingOut }) => {
                     <span>
                       <i className="fa-light fa-check-square"></i>{" "}
                       {t("verify-document")}
-                    </span>
-                  </li>
-                  <li>
-                    <span>
-                      <i className="fa-light fa-moon"></i>
-                      {t("dark-mode")}
-                      <span className="text-[10px] font-semibold bg-base-300 text-base-content px-1 rounded-md">
-                        BETA
-                      </span>
-                      <ThemeToggle />
                     </span>
                   </li>
                 </>
