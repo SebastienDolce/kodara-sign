@@ -120,45 +120,39 @@ export default function HtmlTemplateEditor() {
     setSaving(true);
     setMessage("");
     try {
-      const currentUser = Parse.User.current();
-      const ExtCls = JSON.parse(localStorage.getItem("Extand_Class") || "[]");
-      const extUser = ExtCls?.[0];
-      if (!currentUser || !extUser?.objectId) {
-        throw new Error("Unable to resolve the current OpenSign user.");
-      }
-
-      let object;
-      if (templateId) {
-        object = await new Parse.Query("contracts_Template").get(templateId);
-        if (object.get("TemplateType") !== "html") {
-          throw new Error("This is not an HTML template.");
+      const baseApi = localStorage.getItem("baseUrl") || "";
+      const url = `${removeTrailingSegment(baseApi)}/savehtmltemplate`;
+      const response = await axios.post(
+        url,
+        {
+          templateId: templateId || undefined,
+          Name: form.Name,
+          HtmlContent: form.HtmlContent,
+          DarkCss: form.DarkCss,
+          LightCss: form.LightCss
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            sessiontoken: Parse.User.current().getSessionToken()
+          }
         }
-      } else {
-        object = new Parse.Object("contracts_Template");
-        object.set("CreatedBy", Parse.User.createWithoutData(currentUser.id));
-        object.set("ExtUserPtr", {
-          __type: "Pointer",
-          className: "contracts_Users",
-          objectId: extUser.objectId
-        });
+      );
+      const savedId = response?.data?.objectId;
+      if (!savedId) {
+        throw new Error("Template save did not return an objectId.");
       }
-
-      object.set("Name", form.Name.trim());
-      object.set("TemplateType", "html");
-      object.set("HtmlContent", form.HtmlContent);
-      object.set("DarkCss", form.DarkCss);
-      object.set("LightCss", form.LightCss);
-      object.set("IsArchive", false);
-      const saved = await object.save();
       await loadTemplates();
       setRenderedPdf(null);
       setMessage("Saved.");
       if (!templateId) {
-        navigate(`/html-template/${saved.id}`, { replace: true });
+        navigate(`/html-template/${savedId}`, { replace: true });
       }
     } catch (err) {
       console.error("HTML template save error", err);
-      setMessage(err?.message || "Unable to save HTML template.");
+      setMessage(
+        err?.response?.data?.error || err?.message || "Unable to save HTML template."
+      );
     } finally {
       setSaving(false);
     }
