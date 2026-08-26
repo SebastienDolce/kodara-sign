@@ -38,7 +38,7 @@ async function findProposal(token) {
 export default async function getProposalFile(req, res) {
   try {
     const proposal = await findProposal(req.params?.token);
-    if (!proposal?.objectId || proposal.DeliveryStatus !== 'sent') {
+    if (!proposal?.objectId) {
       return res.status(404).json({ error: 'Delivery link not found.' });
     }
 
