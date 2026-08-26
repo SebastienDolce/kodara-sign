@@ -12,17 +12,51 @@ const escapeHtml = value =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
 
-function publicBaseFromRequest(request) {
-  const fromHeader = request?.headers?.['public_url'];
-  if (fromHeader) return String(fromHeader).replace(/\/$/, '');
-
-  const serverUrl = process.env.SERVER_URL || '';
+function normalizePublicOrigin(value) {
+  if (!value) return '';
   try {
-    const parsed = new URL(serverUrl);
+    const parsed = new URL(String(value));
     return parsed.origin;
   } catch {
     return '';
   }
+}
+
+function isInternalOrigin(origin) {
+  if (!origin) return true;
+  try {
+    const host = new URL(origin).hostname.toLowerCase();
+    return host === 'localhost' || host === '127.0.0.1' || host === '::1';
+  } catch {
+    return true;
+  }
+}
+
+function publicBaseFromRequest(request) {
+  // Parse afterSave hooks often only see OpenSign's internal SERVER_URL, so
+  // prefer explicit public-facing configuration whenever available.
+  const candidates = [
+    request?.headers?.['public_url'],
+    request?.headers?.['x-forwarded-host']
+      ? `${request?.headers?.['x-forwarded-proto'] || 'https'}://${request.headers['x-forwarded-host']}`
+      : '',
+    process.env.PUBLIC_URL,
+    process.env.PUBLIC_SERVER_URL,
+    process.env.APP_URL,
+    process.env.CLIENT_URL,
+  ];
+
+  for (const candidate of candidates) {
+    const origin = normalizePublicOrigin(candidate);
+    if (origin && !isInternalOrigin(origin)) return origin;
+  }
+
+  const serverOrigin = normalizePublicOrigin(process.env.SERVER_URL);
+  if (serverOrigin && !isInternalOrigin(serverOrigin)) return serverOrigin;
+
+  // This is the Kodara Sign fork's canonical public origin. Keeping this final
+  // fallback prevents customer email links from ever pointing at localhost.
+  return 'https://sign.kodara.dev';
 }
 
 function downloadButton(url, label) {
@@ -71,7 +105,6 @@ export default async function handleProposalCompletion(request) {
     }
 
     const publicBase = publicBaseFromRequest(request);
-    if (!publicBase) throw new Error('Unable to resolve public Kodara Sign URL.');
 
     const proposalNumber = proposal.get('ProposalNumber') || 'Proposal';
     const proposalName = proposal.get('Name') || proposalNumber;
