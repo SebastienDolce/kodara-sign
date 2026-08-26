@@ -41,7 +41,7 @@ export default function ProposalViewer() {
   const [loading, setLoading] = useState(true);
   const [accepting, setAccepting] = useState(false);
   const [error, setError] = useState("");
-  const signed = searchParams.get("signed") === "1";
+  const redirectedFromSigning = searchParams.get("signed") === "1";
 
   const apiBase = () => {
     const baseApi = localStorage.getItem("baseUrl") || "";
@@ -119,7 +119,8 @@ export default function ProposalViewer() {
     );
   }
 
-  const accepted = proposal?.status === "accepted";
+  const completed = proposal?.status === "completed" || redirectedFromSigning;
+  const accepted = proposal?.status === "accepted" || completed;
 
   return (
     <div className="min-h-screen bg-[#090909] text-white">
@@ -131,11 +132,11 @@ export default function ProposalViewer() {
       </header>
 
       <main className="max-w-[1100px] mx-auto px-3 md:px-6 py-5 md:py-8 pb-32">
-        {signed ? (
+        {completed ? (
           <div className="mb-5 border border-emerald-500/30 bg-emerald-500/10 rounded-lg px-4 py-3">
             <div className="font-semibold">Agreement completed</div>
             <div className="text-sm text-white/60 mt-1">
-              Your proposal was accepted and your agreement was completed.
+              Your proposal was accepted and your agreement was completed. Your copies are being delivered by email.
             </div>
           </div>
         ) : accepted ? (
@@ -157,7 +158,7 @@ export default function ProposalViewer() {
         </div>
       </main>
 
-      {!signed && (
+      {!completed && (
         <div className="fixed bottom-0 inset-x-0 bg-[#090909]/95 backdrop-blur border-t border-white/10 z-30">
           <div className="max-w-[1100px] mx-auto px-5 md:px-8 py-4 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
             <div>
