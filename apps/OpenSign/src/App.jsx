@@ -23,6 +23,7 @@ import { serverUrl_fn } from "./constant/appinfo";
 import DocSuccessPage from "./pages/DocSuccessPage";
 import DragProvider from "./components/DragProivder";
 import Title from "./components/Title";
+import SourceCodeNotice from "./components/SourceCodeNotice";
 const DebugPdf = lazyWithRetry(() => import("./pages/DebugPdf"));
 const ForgetPassword = lazyWithRetry(() => import("./pages/ForgetPassword"));
 const GuestLogin = lazyWithRetry(() => import("./pages/GuestLogin"));
@@ -145,6 +146,7 @@ function App() {
             <Route path="/emailbuilder" element={<EmailBuilder />} />
             <Route path="*" element={<PageNotFound />} />
           </Routes>
+          <SourceCodeNotice />
         </BrowserRouter>
       )}
     </div>
