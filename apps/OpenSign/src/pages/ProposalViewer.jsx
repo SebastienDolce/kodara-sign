@@ -17,6 +17,23 @@ const buildProposalDocument = (html, css) => {
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="${csp}"><style>html,body{margin:0;min-height:100%;}${safeCss}</style></head><body>${safeHtml}</body></html>`;
 };
 
+const directSigningUrl = (signingUrl) => {
+  const marker = "/login/";
+  if (!signingUrl?.includes(marker)) return signingUrl;
+  try {
+    const encoded = signingUrl.split(marker)[1]?.split(/[?#]/)[0] || "";
+    let normalized = encoded.replace(/-/g, "+").replace(/_/g, "/");
+    normalized += "=".repeat((4 - (normalized.length % 4)) % 4);
+    const decoded = atob(normalized);
+    const [documentId, , contactBookId] = decoded.split("/");
+    if (!documentId || !contactBookId) return signingUrl;
+    return `${window.location.origin}/load/recipientSignPdf/${encodeURIComponent(documentId)}/${encodeURIComponent(contactBookId)}?sendmail=false`;
+  } catch (error) {
+    console.error("Unable to decode proposal signing handoff", error);
+    return signingUrl;
+  }
+};
+
 export default function ProposalViewer() {
   const { token } = useParams();
   const [searchParams] = useSearchParams();
@@ -70,7 +87,7 @@ export default function ProposalViewer() {
       );
       const signingUrl = response?.data?.signingUrl;
       if (signingUrl) {
-        window.location.assign(signingUrl);
+        window.location.assign(directSigningUrl(signingUrl));
         return;
       }
       setProposal((current) => ({ ...current, status: "accepted" }));
