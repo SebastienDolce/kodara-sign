@@ -64,7 +64,7 @@ import LoaderWithMsg from "../primitives/LoaderWithMsg";
 import DownloadPdfZip from "../primitives/DownloadPdfZip";
 import Loader from "../primitives/Loader";
 import PdfDeclineModal from "../primitives/PdfDeclineModal";
-import { serverUrl_fn } from "../constant/appinfo";
+import { appInfo, serverUrl_fn } from "../constant/appinfo";
 import AgreementSign from "../components/pdf/AgreementSign";
 import WidgetComponent from "../components/pdf/WidgetComponent";
 import PlaceholderCopy from "../components/pdf/PlaceholderCopy";
@@ -84,8 +84,7 @@ function PdfRequestFiles(
   const isShowModal = useSelector((state) => state.widget.isShowModal);
   const defaultSignImg = useSelector((state) => state.widget.defaultSignImg);
   const myInitial = useSelector((state) => state.widget.myInitial);
-  const appName =
-    "OpenSign™";
+  const appName = appInfo.appName;
   const [pdfDetails, setPdfDetails] = useState([]);
   const [signedSigners, setSignedSigners] = useState([]);
   const [unsignedSigners, setUnSignedSigners] = useState([]);
@@ -1810,7 +1809,14 @@ function PdfRequestFiles(
           ) : handleError ? (
             <HandleError handleError={handleError} />
           ) : (
-            <div>
+            <div className="kodara-signing-shell">
+              <header className="kodara-signing-brandbar">
+                <div className="kodara-signing-wordmark" aria-label={appName}>
+                  <span>KODARA<span aria-hidden="true">.</span></span>
+                  <span>SIGN</span>
+                </div>
+                <p>Secure document workflow</p>
+              </header>
               {!isAgree &&
                 currentSigner &&
                 !isExpired &&

@@ -4,11 +4,10 @@ import CreateFolder from "./CreateFolder";
 import ModalUi from "../../../primitives/ModalUi";
 import Tooltip from "../../../primitives/Tooltip";
 import { useTranslation } from "react-i18next";
+import { appInfo } from "../../../constant/appinfo";
 
 const SelectFolder = ({ required, onSuccess, folderCls, isReset }) => {
-  const appName =
-    "OpenSign™";
-  const drivename = appName === "OpenSign™" ? "OpenSign™" : "";
+  const drivename = appInfo.appName;
   const { t } = useTranslation();
   const [isOpen, SetIsOpen] = useState(false);
   const [clickFolder, setClickFolder] = useState("");

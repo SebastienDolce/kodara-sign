@@ -1,15 +1,16 @@
 import { useEffect, useState } from "react";
 
 const ThemeToggle = () => {
-  const [isDark, setIsDark] = useState(false);
+  const [isDark, setIsDark] = useState(true);
 
   useEffect(() => {
     const storedTheme = localStorage.getItem("theme");
-    if (storedTheme === "dark") {
+    if (storedTheme === "light") {
+      setIsDark(false);
+      document.documentElement.setAttribute("data-theme", "opensigncss");
+    } else {
       setIsDark(true);
       document.documentElement.setAttribute("data-theme", "opensigndark");
-    } else {
-      document.documentElement.setAttribute("data-theme", "opensigncss");
     }
   }, []);
 
@@ -30,7 +31,7 @@ const ThemeToggle = () => {
       <input
         id="dark-mode-toggle"
         type="checkbox"
-        className="op-toggle checked:[--tglbg:#3368ff] transition-all checked:bg-white"
+        className="op-toggle checked:[--tglbg:#ef2b2d] transition-all checked:bg-white"
         checked={isDark}
         onChange={handleChange}
       />

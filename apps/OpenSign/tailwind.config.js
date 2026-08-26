@@ -92,10 +92,10 @@ module.exports = {
           neutral: "#2A2A2A",
           "neutral-content": "#D6D3CC",
 
-          "base-100": "#050505",
-          "base-200": "#0B0B0B",
-          "base-300": "#151515",
-          "base-content": "#F1F0EC",
+          "base-100": "#0A0A0A",
+          "base-200": "#111111",
+          "base-300": "#181818",
+          "base-content": "#EDEDED",
 
           info: "#2563EB", // For info panels like "Out for signature"
           success: "#22C55E", // Optional: for completed docs or alerts
