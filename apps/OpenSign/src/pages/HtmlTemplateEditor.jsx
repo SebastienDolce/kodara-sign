@@ -4,6 +4,7 @@ import Parse from "parse";
 import axios from "axios";
 import DOMPurify from "dompurify";
 import Loader from "../primitives/Loader";
+import ModalUi from "../primitives/ModalUi";
 import { removeTrailingSegment } from "../constant/Utils";
 import { withSessionValidation } from "../utils";
 
@@ -12,6 +13,12 @@ const EMPTY_TEMPLATE = {
   HtmlContent: "",
   DarkCss: "",
   LightCss: ""
+};
+
+const EMPTY_SEND_FORM = {
+  recipientName: "",
+  recipientEmail: "",
+  contractTemplateId: ""
 };
 
 const buildPreview = (html, css) => {
@@ -43,9 +50,17 @@ export default function HtmlTemplateEditor() {
   const [previewTheme, setPreviewTheme] = useState("dark");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
   const [renderingTheme, setRenderingTheme] = useState("");
   const [renderedPdf, setRenderedPdf] = useState(null);
   const [message, setMessage] = useState("");
+  const [isSendModal, setIsSendModal] = useState(false);
+  const [contractTemplates, setContractTemplates] = useState([]);
+  const [loadingContracts, setLoadingContracts] = useState(false);
+  const [sendForm, setSendForm] = useState(EMPTY_SEND_FORM);
+  const [sendingProposal, setSendingProposal] = useState(false);
+  const [sendResult, setSendResult] = useState(null);
+  const [sendError, setSendError] = useState("");
 
   const preview = useMemo(
     () =>
@@ -72,6 +87,7 @@ export default function HtmlTemplateEditor() {
 
   const loadTemplate = async (id) => {
     setRenderedPdf(null);
+    setIsDirty(false);
     if (!id) {
       setForm(EMPTY_TEMPLATE);
       return;
@@ -98,6 +114,7 @@ export default function HtmlTemplateEditor() {
       try {
         setLoading(true);
         setMessage("");
+        setSendResult(null);
         await Promise.all([loadTemplates(), loadTemplate(templateId)]);
       } catch (err) {
         console.error("HTML template load error", err);
@@ -118,6 +135,7 @@ export default function HtmlTemplateEditor() {
 
   const updateField = (field, value) => {
     setRenderedPdf(null);
+    setIsDirty(true);
     setForm((current) => ({ ...current, [field]: value }));
   };
 
@@ -157,6 +175,7 @@ export default function HtmlTemplateEditor() {
       }
 
       setRenderedPdf(null);
+      setIsDirty(false);
       setMessage("Saved.");
 
       if (!templateId) {
@@ -181,6 +200,10 @@ export default function HtmlTemplateEditor() {
   const renderPdf = withSessionValidation(async (theme) => {
     if (!templateId) {
       setMessage("Save the template before rendering a PDF.");
+      return;
+    }
+    if (isDirty) {
+      setMessage("Save your changes before rendering a PDF.");
       return;
     }
     setRenderingTheme(theme);
@@ -212,6 +235,73 @@ export default function HtmlTemplateEditor() {
     }
   });
 
+  const openSendProposal = withSessionValidation(async () => {
+    if (!templateId) {
+      setMessage("Save the template before sending a proposal.");
+      return;
+    }
+    if (isDirty) {
+      setMessage("Save your changes before sending a proposal.");
+      return;
+    }
+    setIsSendModal(true);
+    setSendForm(EMPTY_SEND_FORM);
+    setSendResult(null);
+    setSendError("");
+    setLoadingContracts(true);
+    try {
+      const response = await axios.get(customApiUrl("/contracttemplates"), {
+        headers: authHeaders()
+      });
+      setContractTemplates(response?.data?.templates || []);
+    } catch (err) {
+      setSendError(
+        err?.response?.data?.error || err?.message || "Unable to load contract templates."
+      );
+    } finally {
+      setLoadingContracts(false);
+    }
+  });
+
+  const sendProposal = withSessionValidation(async (event) => {
+    event.preventDefault();
+    if (
+      !sendForm.recipientName.trim() ||
+      !sendForm.recipientEmail.trim() ||
+      !sendForm.contractTemplateId
+    ) {
+      setSendError("Recipient name, email, and contract template are required.");
+      return;
+    }
+    setSendingProposal(true);
+    setSendError("");
+    setSendResult(null);
+    try {
+      const response = await axios.post(
+        customApiUrl("/proposals"),
+        {
+          htmlTemplateId: templateId,
+          contractTemplateId: sendForm.contractTemplateId,
+          recipientName: sendForm.recipientName,
+          recipientEmail: sendForm.recipientEmail
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            ...authHeaders()
+          }
+        }
+      );
+      setSendResult(response?.data || null);
+    } catch (err) {
+      setSendError(
+        err?.response?.data?.error || err?.message || "Unable to send proposal."
+      );
+    } finally {
+      setSendingProposal(false);
+    }
+  });
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-[50vh]">
@@ -229,13 +319,25 @@ export default function HtmlTemplateEditor() {
             One HTML source, with independent dark and light stylesheets.
           </p>
         </div>
-        <button
-          type="button"
-          className="op-btn op-btn-primary"
-          onClick={() => navigate("/html-template")}
-        >
-          New HTML template
-        </button>
+        <div className="flex flex-wrap gap-2">
+          {templateId ? (
+            <button
+              type="button"
+              className="op-btn op-btn-primary"
+              disabled={isDirty || saving}
+              onClick={openSendProposal}
+            >
+              Send proposal
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className="op-btn"
+            onClick={() => navigate("/html-template")}
+          >
+            New HTML template
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-[260px_minmax(0,1fr)_minmax(360px,1fr)] gap-4">
@@ -303,6 +405,7 @@ export default function HtmlTemplateEditor() {
             >
               {saving ? "Saving..." : "Save template"}
             </button>
+            {isDirty ? <span className="text-sm opacity-60">Unsaved changes</span> : null}
             {message ? <span className="text-sm opacity-75">{message}</span> : null}
           </div>
         </form>
@@ -346,7 +449,7 @@ export default function HtmlTemplateEditor() {
             <button
               type="button"
               className="op-btn op-btn-sm"
-              disabled={!templateId || saving || Boolean(renderingTheme)}
+              disabled={!templateId || isDirty || saving || Boolean(renderingTheme)}
               onClick={() => renderPdf("dark")}
             >
               {renderingTheme === "dark" ? "Rendering..." : "Render dark PDF"}
@@ -354,7 +457,7 @@ export default function HtmlTemplateEditor() {
             <button
               type="button"
               className="op-btn op-btn-sm"
-              disabled={!templateId || saving || Boolean(renderingTheme)}
+              disabled={!templateId || isDirty || saving || Boolean(renderingTheme)}
               onClick={() => renderPdf("light")}
             >
               {renderingTheme === "light" ? "Rendering..." : "Render light PDF"}
@@ -372,6 +475,121 @@ export default function HtmlTemplateEditor() {
           </div>
         </section>
       </div>
+
+      {isSendModal ? (
+        <ModalUi
+          isOpen
+          title="Send proposal"
+          handleClose={() => !sendingProposal && setIsSendModal(false)}
+        >
+          <div className="px-6 pb-6 min-w-[min(560px,90vw)]">
+            {sendResult?.shareUrl ? (
+              <div>
+                <div className="font-semibold text-lg mb-2">Proposal created</div>
+                <p className="text-sm opacity-70 mb-4">
+                  {sendResult.emailSent
+                    ? "The proposal email was sent."
+                    : "The proposal was created, but email delivery was not confirmed. You can send the secure link manually."}
+                </p>
+                <div className="rounded border border-base-content/15 bg-base-200 p-3 mb-4">
+                  <div className="text-xs opacity-60 mb-1">{sendResult.proposalNumber}</div>
+                  <div className="text-sm break-all">{sendResult.shareUrl}</div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className="op-btn op-btn-primary"
+                    onClick={() => window.open(sendResult.shareUrl, "_blank", "noopener,noreferrer")}
+                  >
+                    Open proposal
+                  </button>
+                  <button
+                    type="button"
+                    className="op-btn"
+                    onClick={() => navigator.clipboard?.writeText(sendResult.shareUrl)}
+                  >
+                    Copy link
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={sendProposal}>
+                <p className="text-sm opacity-70 mb-4">
+                  Sending freezes the current saved HTML and both stylesheets, generates the dark and print PDFs, and creates an immutable proposal snapshot.
+                </p>
+                <label className="block mb-3">
+                  <span className="block text-sm font-medium mb-1">Client name</span>
+                  <input
+                    className="op-input op-input-bordered w-full"
+                    value={sendForm.recipientName}
+                    onChange={(event) =>
+                      setSendForm((current) => ({
+                        ...current,
+                        recipientName: event.target.value
+                      }))
+                    }
+                    required
+                  />
+                </label>
+                <label className="block mb-3">
+                  <span className="block text-sm font-medium mb-1">Client email</span>
+                  <input
+                    type="email"
+                    className="op-input op-input-bordered w-full"
+                    value={sendForm.recipientEmail}
+                    onChange={(event) =>
+                      setSendForm((current) => ({
+                        ...current,
+                        recipientEmail: event.target.value
+                      }))
+                    }
+                    required
+                  />
+                </label>
+                <label className="block mb-4">
+                  <span className="block text-sm font-medium mb-1">Agreement template</span>
+                  <select
+                    className="op-select op-select-bordered w-full"
+                    value={sendForm.contractTemplateId}
+                    onChange={(event) =>
+                      setSendForm((current) => ({
+                        ...current,
+                        contractTemplateId: event.target.value
+                      }))
+                    }
+                    required
+                    disabled={loadingContracts}
+                  >
+                    <option value="">
+                      {loadingContracts ? "Loading..." : "Choose a one-signer OpenSign template"}
+                    </option>
+                    {contractTemplates.map((template) => (
+                      <option key={template.objectId} value={template.objectId}>
+                        {template.Name}
+                      </option>
+                    ))}
+                  </select>
+                  {!loadingContracts && contractTemplates.length === 0 ? (
+                    <span className="block text-xs opacity-60 mt-1">
+                      No eligible one-signer PDF contract templates were found.
+                    </span>
+                  ) : null}
+                </label>
+                {sendError ? (
+                  <div className="text-sm text-red-500 mb-3">{sendError}</div>
+                ) : null}
+                <button
+                  type="submit"
+                  className="op-btn op-btn-primary"
+                  disabled={sendingProposal || loadingContracts || contractTemplates.length === 0}
+                >
+                  {sendingProposal ? "Freezing and sending..." : "Send proposal"}
+                </button>
+              </form>
+            )}
+          </div>
+        </ModalUi>
+      ) : null}
     </div>
   );
 }
