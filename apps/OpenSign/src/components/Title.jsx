@@ -76,7 +76,7 @@ export default function Title() {
     <>
       <title>{title}</title>
       <meta name="description" content={appInfo.metaDescription} />
-      {logo && <link rel="icon" type="image/svg+xml" href={logo} />}
+      {logo && <link rel="icon" href={logo} />}
       <link rel="manifest" href={manifestUrl} />
     </>
   );
