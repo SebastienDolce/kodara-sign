@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { formatDateToDdMmmYyyy } from "../constant/Utils";
 import SignerCell from "./SignerCell";
+import { appInfo } from "../constant/appinfo";
 
 function isValidDateString(str) {
   const date = new Date(str);
@@ -36,9 +37,7 @@ export const RenderReportCell = ({
   handleItemClick
 }) => {
   const { t } = useTranslation();
-  const appName =
-    "OpenSign™";
-  const drivename = appName === "OpenSign™" ? "OpenSign™" : "";
+  const drivename = appInfo.appName;
   switch (col) {
     case "Sr.No":
       return (

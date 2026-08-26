@@ -16,10 +16,10 @@ import Loader from "../primitives/Loader";
 import { useTranslation } from "react-i18next";
 import { sessionStatus } from "../redux/reducers/userReducer";
 import SessionExpiredModal from "../primitives/SessionExpiredModal";
+import { appInfo } from "../constant/appinfo";
 
 const HomeLayout = () => {
-  const appName =
-    "OpenSign™";
+  const appName = appInfo.appName;
   const { t, i18n } = useTranslation();
   const dispatch = useDispatch();
   const tourArr = useSelector((state) => state.TourSteps);
@@ -81,7 +81,7 @@ const HomeLayout = () => {
   }, [tourArr]);
 
   const handleDynamicSteps = () => {
-    const github = "https://github.com/OpenSignLabs/OpenSign";
+    const github = appInfo.docsUrl;
     if (tourArr && tourArr.length > 0) {
       const resArr = tourArr.map((obj, index) => {
         if (tourArr.length - 1 === index) {

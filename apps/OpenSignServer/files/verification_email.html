@@ -1,16 +1,80 @@
+<!doctype html>
 <html>
-
-<head>
+  <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-</head>
-
-<body style="text-align: center;">
-    <p style="font-weight: bolder; font-size: large;">Welcome!</p>
-    <p>Click the button below to verify your email address:</p>
-    <br />
-    <p><a href="{{{link}}}" style="background-color: lightskyblue; cursor: pointer; border-radius: 5px; padding: 10px; border-style: solid; border-width: 2px; text-decoration: none; font-weight: bolder; color:blue">Verify email</a></p>
-    <br />
-    <p>{{appName}}</p>
-</body>
-
+  </head>
+  <body
+    style="margin: 0; padding: 0; background: #111111; font-family: Arial, Helvetica, sans-serif"
+  >
+    <table
+      role="presentation"
+      width="100%"
+      cellspacing="0"
+      cellpadding="0"
+      border="0"
+      style="background: #111111"
+    >
+      <tr>
+        <td align="center" style="padding: 32px 16px">
+          <table
+            role="presentation"
+            width="100%"
+            cellspacing="0"
+            cellpadding="0"
+            border="0"
+            style="max-width: 600px; background: #0a0a0a; border: 1px solid #292929; color: #ededed"
+          >
+            <tr>
+              <td style="padding: 28px 32px 24px; font-size: 25px; font-weight: 900; color: #fff">
+                KODARA<span style="color: #ef2b2d">.</span
+                ><span style="float: right; font-size: 11px; letter-spacing: 3px; color: #a6a6a6"
+                  >SIGN</span
+                >
+              </td>
+            </tr>
+            <tr>
+              <td style="height: 3px; background: #ef2b2d; font-size: 0; line-height: 0">&nbsp;</td>
+            </tr>
+            <tr>
+              <td style="padding: 42px 32px">
+                <p
+                  style="
+                    margin: 0 0 12px;
+                    color: #ef2b2d;
+                    font-size: 11px;
+                    font-weight: 700;
+                    letter-spacing: 3px;
+                    text-transform: uppercase;
+                  "
+                >
+                  Welcome to {{appName}}
+                </p>
+                <h1 style="margin: 0 0 18px; color: #fff; font-size: 32px; letter-spacing: -1px">
+                  Verify your email
+                </h1>
+                <p style="margin: 0 0 28px; color: #c6c6c6; font-size: 16px; line-height: 1.6">
+                  Confirm your email address to finish securing your account.
+                </p>
+                <a
+                  href="{{{link}}}"
+                  style="
+                    display: inline-block;
+                    padding: 15px 22px;
+                    background: #ef2b2d;
+                    color: #fff;
+                    font-size: 13px;
+                    font-weight: 800;
+                    letter-spacing: 1.5px;
+                    text-decoration: none;
+                    text-transform: uppercase;
+                  "
+                  >Verify email</a
+                >
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
 </html>

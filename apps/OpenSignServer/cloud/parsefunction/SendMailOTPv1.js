@@ -1,4 +1,4 @@
-import { appName, smtpenable, updateMailCount } from '../../Utils.js';
+import { appName, brandedNotificationEmail, smtpenable, updateMailCount } from '../../Utils.js';
 async function getDocument(docId) {
   try {
     const query = new Parse.Query('contracts_Document');
@@ -33,10 +33,11 @@ async function sendMailOTPv1(request) {
           recipient: recipient,
           subject: `Your ${AppName} OTP`,
           text: 'otp email',
-          html:
-            `<html><head><meta http-equiv='Content-Type' content='text/html;charset=UTF-8' /></head><body><div style='background-color:#f5f5f5;padding:20px'><div style='background-color:white;'><div style='background-color:red;padding:2px;font-family:system-ui;background-color:#47a3ad;'><p style='font-size:20px;font-weight:400;color:white;padding-left:20px;'>OTP Verification</p></div><div style='padding:20px;'><p style='font-family:system-ui;font-size:14px;'>Your OTP for ${AppName} verification is:</p><p style='text-decoration:none;font-weight:bolder;color:blue;font-size:45px;margin:20px;'>` +
-            code +
-            '</p></div></div></div></body></html>',
+          html: brandedNotificationEmail({
+            eyebrow: 'Identity verification',
+            title: 'Your one-time code',
+            message: `<p style="margin:0 0 18px;">Use this code to continue in ${AppName}:</p><p style="margin:0;color:#fff;font-size:42px;font-weight:900;letter-spacing:8px;">${code}</p><p style="margin:18px 0 0;color:#858585;font-size:13px;">If you did not request this code, you can ignore this email.</p>`,
+          }),
         });
         console.log('OTP sent', code);
         if (request.params?.docId) {

@@ -125,7 +125,7 @@
   .op-btn:focus-visible,
   .op-input:focus-visible,
   .op-select:focus-visible {
-    outline: 2px solid #007ACC !important;
+    outline: 2px solid #EF2B2D !important;
     outline-offset: 2px !important;
   }
 }

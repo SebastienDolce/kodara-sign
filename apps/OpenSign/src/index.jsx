@@ -22,9 +22,10 @@ if (localStorage.getItem("showUpgradeProgress")) {
 }
 
 const savedTheme = localStorage.getItem("theme");
-if (savedTheme === "dark") {
-  document.documentElement.setAttribute("data-theme", "opensigndark");
-}
+document.documentElement.setAttribute(
+  "data-theme",
+  savedTheme === "light" ? "opensigncss" : "opensigndark"
+);
 
 
 const root = ReactDOM.createRoot(document.getElementById("root"));

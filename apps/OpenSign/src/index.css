@@ -3,7 +3,124 @@
 @tailwind utilities;
 
 body {
-  background-color: white;
+  background-color: hsl(var(--b1));
+  color: hsl(var(--bc));
+  font-family: Arial, Helvetica, ui-sans-serif, system-ui, sans-serif;
+}
+
+::selection { background: #ef2b2d; color: #fff; }
+
+:root {
+  --kodara-red: #ef2b2d;
+  --kodara-line: #292929;
+}
+
+/* Kodara's product language: hard edges, fine rules, red focus, no soft SaaS chrome. */
+.op-card,
+.op-modal-box,
+.op-input,
+.op-select,
+.op-textarea,
+.op-btn,
+.op-badge,
+.op-tab {
+  border-radius: 0 !important;
+}
+
+.op-btn {
+  box-shadow: none !important;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.op-card { border: 1px solid hsl(var(--bc) / 0.14); box-shadow: none !important; }
+.op-navbar { border-bottom: 1px solid hsl(var(--bc) / 0.18); box-shadow: none !important; }
+.op-btn-primary { border-color: var(--kodara-red) !important; }
+[aria-current="page"] { border-left: 3px solid var(--kodara-red); }
+.op-card h1,
+.op-card h2,
+.op-card h3 { font-weight: 800; letter-spacing: -0.035em; }
+.op-input:focus,
+.op-select:focus,
+.op-textarea:focus {
+  border-color: var(--kodara-red) !important;
+  outline-color: var(--kodara-red) !important;
+}
+
+.kodara-login-shell {
+  min-height: 100vh;
+  background:
+    linear-gradient(to right, transparent 3.9%, rgba(239, 43, 45, 0.14) 4%, transparent 4.1%),
+    linear-gradient(to bottom, transparent 7.4rem, var(--kodara-line) 7.45rem, transparent 7.5rem),
+    hsl(var(--b1));
+}
+
+.kodara-login-panel { border: 1px solid var(--kodara-line); box-shadow: none !important; }
+.kodara-kicker {
+  color: var(--kodara-red); font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.68rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
+}
+
+.kodara-signing-shell {
+  min-height: 100vh;
+  background: hsl(var(--b1));
+  color: hsl(var(--bc));
+}
+
+.kodara-signing-brandbar {
+  min-height: 3.75rem;
+  padding: 0.8rem 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: #000;
+  border-bottom: 1px solid #292929;
+  color: #fff;
+}
+
+.kodara-signing-wordmark {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  font-size: 1.35rem;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+}
+
+.kodara-signing-wordmark span:first-child span { color: var(--kodara-red); }
+.kodara-signing-wordmark > span:last-child {
+  padding-left: 0.75rem;
+  border-left: 1px solid #555;
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+}
+
+.kodara-signing-brandbar p {
+  margin: 0;
+  color: #a6a6a6;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.kodara-signer-card {
+  background: hsl(var(--b2)) !important;
+  border: 1px solid hsl(var(--bc) / 0.16);
+  border-left-width: 4px;
+  border-radius: 0 !important;
+}
+
+.kodara-signer-avatar {
+  border-radius: 0 !important;
+  filter: saturate(0.15) contrast(1.15);
+}
+
+@media (max-width: 640px) {
+  .kodara-signing-brandbar { min-height: 3.2rem; padding: 0.65rem 0.8rem; }
+  .kodara-signing-brandbar p { display: none; }
 }
 
 /* Custom CSS to hide scrollbar */
@@ -160,7 +277,7 @@ body {
 
   /* Tour content improvements */
   .reactour__badge {
-    background-color: #007acc !important;
+    background-color: #ef2b2d !important;
     color: #ffffff !important;
   }
 
@@ -206,7 +323,7 @@ body {
   }
 
   .react-datepicker__day--selected {
-    background-color: #007acc !important;
+    background-color: #ef2b2d !important;
     color: #ffffff !important;
   }
 
