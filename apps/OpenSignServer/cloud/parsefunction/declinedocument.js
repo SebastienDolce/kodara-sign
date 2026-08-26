@@ -5,7 +5,7 @@ async function sendDeclineMail(doc, publicUrl, userId, reason) {
   try {
     const TenantAppName = appName;
     const logo =
-      "<img src='https://qikinnovation.ams3.digitaloceanspaces.com/logo.png' height='50' style='padding:20px'/>";
+      "<img src='https://sign.kodara.dev/kodara-sign-favicon.svg' height='50' alt='Kodara Sign' style='padding:20px'/>";
 
     const removePrefill =
       doc?.Placeholders?.length > 0 && doc?.Placeholders?.filter(x => x?.Role !== 'prefill');
@@ -23,7 +23,7 @@ async function sendDeclineMail(doc, publicUrl, userId, reason) {
     const subject = `Document "${pdfName}" has been declined by ${signerName}`;
     const body =
       "<html><head><meta http-equiv='Content-Type' content='text/html; charset=UTF-8'/></head><body><div style='background-color:#f5f5f5;padding:20px'><div style='background-color:white'>" +
-      `<div>${logo}</div><div style='padding:2px;font-family:system-ui;background-color:#47a3ad'><p style='font-size:20px;font-weight:400;color:white;padding-left:20px'>Document declined by ${signerName}</p>` +
+      `<div>${logo}</div><div style='padding:2px;font-family:system-ui;background-color:#ef2b2d'><p style='font-size:20px;font-weight:400;color:white;padding-left:20px'>Document declined by ${signerName}</p>` +
       `</div><div style='padding:20px;font-family:system-ui;font-size:14px'><p>Dear ${creatorName},</p>` +
       `<p>${pdfName} has been declined by ${signerName} "${signerEmail}" on ${new Date().toLocaleDateString()}.</p>` +
       `<p>Decline Reason: ${reason || 'Not specified'}</p>` +

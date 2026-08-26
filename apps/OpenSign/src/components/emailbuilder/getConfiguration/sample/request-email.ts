@@ -2,8 +2,7 @@ import { TEditorConfiguration } from "../../documents/editor/core";
 
 const getRequestEmail = (
 ): TEditorConfiguration => {
-  const appName =
-    "OpenSign™";
+  const appName = "Kodara Sign";
 
   const logoBlock =
         {
@@ -16,8 +15,8 @@ const getRequestEmail = (
               props: {
                 width: null,
                 height: 50,
-                url: "https://qikinnovation.ams3.digitaloceanspaces.com/logo.png",
-                alt: "logo",
+                url: "https://sign.kodara.dev/kodara-sign-favicon.svg",
+                alt: "Kodara Sign",
                 linkHref: null,
                 contentAlignment: "middle"
               }
@@ -52,7 +51,7 @@ const getRequestEmail = (
       data: {
         style: {
           color: "#FFFFFF",
-          backgroundColor: "#47A3AD",
+          backgroundColor: "#EF2B2D",
           fontSize: 20,
           fontWeight: "bold",
           padding: {

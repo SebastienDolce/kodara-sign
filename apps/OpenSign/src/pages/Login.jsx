@@ -23,8 +23,7 @@ import { useTranslation } from "react-i18next";
 import SelectLanguage from "../components/pdf/SelectLanguage";
 
 function Login() {
-  const appName =
-    "OpenSign™";
+  const appName = appInfo.appName;
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
@@ -426,9 +425,9 @@ function Login() {
           <div
             aria-labelledby="loginHeading"
             role="region"
-            className="pb-1 md:pb-4 pt-10 md:px-10 lg:px-16 h-full"
+            className="kodara-login-shell pb-1 md:pb-4 pt-10 md:px-10 lg:px-16 h-full"
           >
-            <div className="md:p-4 lg:p-10 p-4 bg-base-100 text-base-content op-card">
+            <div className="kodara-login-panel md:p-4 lg:p-10 p-4 bg-base-100 text-base-content op-card">
               <div className="w-[250px] h-[66px] inline-block overflow-hidden">
                 {image && (
                   <img
@@ -441,7 +440,8 @@ function Login() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-2">
                 <div>
                   <form onSubmit={handleLoginBtn} aria-label="Login Form">
-                    <h1 className="text-[30px] mt-6">{t("welcome")}</h1>
+                    <p className="kodara-kicker mt-8">Secure document workflow</p>
+                    <h1 className="text-[30px] mt-3 font-bold">{t("welcome")}</h1>
                     <fieldset>
                       <legend className="text-[12px] text-[#878787]">
                         {t("Login-to-your-account")}
@@ -455,7 +455,7 @@ function Login() {
                           type="email"
                           className="op-input op-input-bordered op-input-sm focus:outline-none hover:border-base-content w-full text-xs"
                           name="email"
-                          autoComplete="username"
+                          autoComplete="off"
                           value={state.email}
                           onChange={handleChange}
                           required
@@ -477,7 +477,7 @@ function Login() {
                                 className="op-input op-input-bordered op-input-sm focus:outline-none hover:border-base-content w-full text-xs"
                                 name="password"
                                 value={state.password}
-                                autoComplete="current-password"
+                                autoComplete="off"
                                 onChange={handleChange}
                                 onInvalid={(e) =>
                                   e.target.setCustomValidity(

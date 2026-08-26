@@ -3,7 +3,51 @@
 @tailwind utilities;
 
 body {
-  background-color: white;
+  background-color: hsl(var(--b1));
+  color: hsl(var(--bc));
+  font-family: Arial, Helvetica, ui-sans-serif, system-ui, sans-serif;
+}
+
+::selection { background: #ef2b2d; color: #fff; }
+
+:root {
+  --kodara-red: #ef2b2d;
+  --kodara-line: #292929;
+}
+
+/* Kodara's product language: hard edges, fine rules, red focus, no soft SaaS chrome. */
+.op-card,
+.op-modal-box,
+.op-input,
+.op-select,
+.op-textarea,
+.op-btn,
+.op-badge,
+.op-tab {
+  border-radius: 0 !important;
+}
+
+.op-btn { text-transform: uppercase; letter-spacing: 0.06em; }
+.op-btn-primary { border-color: var(--kodara-red) !important; }
+.op-input:focus,
+.op-select:focus,
+.op-textarea:focus {
+  border-color: var(--kodara-red) !important;
+  outline-color: var(--kodara-red) !important;
+}
+
+.kodara-login-shell {
+  min-height: 100vh;
+  background:
+    linear-gradient(to right, transparent 3.9%, rgba(239, 43, 45, 0.14) 4%, transparent 4.1%),
+    linear-gradient(to bottom, transparent 7.4rem, var(--kodara-line) 7.45rem, transparent 7.5rem),
+    hsl(var(--b1));
+}
+
+.kodara-login-panel { border: 1px solid var(--kodara-line); box-shadow: none !important; }
+.kodara-kicker {
+  color: var(--kodara-red); font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.68rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
 }
 
 /* Custom CSS to hide scrollbar */
@@ -160,7 +204,7 @@ body {
 
   /* Tour content improvements */
   .reactour__badge {
-    background-color: #007acc !important;
+    background-color: #ef2b2d !important;
     color: #ffffff !important;
   }
 
@@ -206,7 +250,7 @@ body {
   }
 
   .react-datepicker__day--selected {
-    background-color: #007acc !important;
+    background-color: #ef2b2d !important;
     color: #ffffff !important;
   }
 
