@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from "react-router";
 import axios from "axios";
 import DOMPurify from "dompurify";
 import Loader from "../primitives/Loader";
+import SourceCodeNotice from "../components/SourceCodeNotice";
 import { removeTrailingSegment } from "../constant/Utils";
 
 const buildProposalDocument = (html, css) => {
@@ -176,6 +177,9 @@ export default function ProposalViewer() {
               Agreement completed. Your copies are being delivered by email.
             </div>
           )}
+          <div className="mt-5">
+            <SourceCodeNotice variant="sidebar" />
+          </div>
         </div>
       </aside>
 
@@ -183,7 +187,10 @@ export default function ProposalViewer() {
         <div className="font-semibold tracking-tight text-lg">
           Kodara <span className="text-[#ef2b2d]">▪</span> Sign
         </div>
-        <div className="text-xs text-white/45">{proposal?.proposalNumber}</div>
+        <div className="text-right">
+          <div className="text-xs text-white/45">{proposal?.proposalNumber}</div>
+          <SourceCodeNotice variant="compact" />
+        </div>
       </header>
 
       <main className="lg:pl-56">
