@@ -3,11 +3,11 @@ import Package from "../../package.json";
 import axios from "axios";
 import { openInNewTab } from "../constant/Utils";
 import { appInfo } from "../constant/appinfo";
-import { useTranslation } from "react-i18next";
+
+const SOURCE_URL = "https://github.com/SebastienDolce/kodara-sign";
 
 const Footer = () => {
   const appName = appInfo.appName;
-  const { t } = useTranslation();
   const [showButton, setShowButton] = useState(false);
   const [version, setVersion] = useState("");
 
@@ -15,7 +15,7 @@ const Footer = () => {
     axios
       .get("/version.txt")
       .then((response) => {
-        setVersion(response.data); // Set the retrieved data to the state variable
+        setVersion(response.data);
       })
       .catch((error) => {
         console.error("Error reading the file:", error);
@@ -23,11 +23,7 @@ const Footer = () => {
   }, []);
 
   const handleScroll = () => {
-    if (window.pageYOffset >= 50) {
-      setShowButton(true);
-    } else {
-      setShowButton(false);
-    }
+    setShowButton(window.pageYOffset >= 50);
   };
 
   const scrollToTop = () => {
@@ -37,14 +33,11 @@ const Footer = () => {
 
   useEffect(() => {
     window.addEventListener("scroll", handleScroll);
-
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-    };
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   const openUrl = () => {
-    openInNewTab("https://github.com/SebastienDolce/kodara-sign");
+    openInNewTab(SOURCE_URL);
   };
 
   return (
@@ -52,10 +45,9 @@ const Footer = () => {
       <footer className="op-footer op-footer-center py-3 bg-base-300 text-base-content text-center text-[13px]">
         <aside>
           <p>
-            {t("all-right")} &copy; {new Date().getFullYear()} &nbsp;
-            <span onClick={openUrl} className="hover:underline cursor-pointer">
-              {appName} ( {t("version")}:{" "}
-              {version ? version : `${Package.version} `})
+            {appName} · v{version || Package.version} · modified from OpenSign · AGPL-3.0 ·{" "}
+            <span onClick={openUrl} className="hover:underline cursor-pointer font-medium">
+              Source code
             </span>
           </p>
         </aside>
