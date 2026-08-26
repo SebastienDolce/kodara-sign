@@ -85,16 +85,19 @@ export default async function handleProposalCompletion(request) {
   await proposal.save(null, { useMasterKey: true });
 
   try {
-    let certificateAvailable = Boolean(doc.get('CertificateUrl'));
-    if (!certificateAvailable) {
-      try {
-        const certificate = await generateCertificatebydocId({ params: { docId: doc.id } });
-        certificateAvailable = Boolean(certificate?.CertificateUrl);
-      } catch (certificateError) {
-        console.error(
-          `[PROPOSAL] Certificate generation failed for ${doc.id}: ${certificateError?.message}`
-        );
-      }
+    // Proposal-linked agreements always receive a freshly generated Kodara
+    // certificate, replacing any generic certificate created by OpenSign's
+    // normal signing completion path.
+    let certificateAvailable = false;
+    try {
+      const certificate = await generateCertificatebydocId({
+        params: { docId: doc.id, force: true },
+      });
+      certificateAvailable = Boolean(certificate?.CertificateUrl);
+    } catch (certificateError) {
+      console.error(
+        `[PROPOSAL] Certificate generation failed for ${doc.id}: ${certificateError?.message}`
+      );
     }
 
     if (!certificateAvailable) {
