@@ -122,48 +122,107 @@ export default function ProposalViewer() {
   const completed = proposal?.status === "completed" || redirectedFromSigning;
   const accepted = proposal?.status === "accepted" || completed;
 
+  const proposalAction = (
+    <button
+      type="button"
+      className="op-btn op-btn-primary w-full"
+      disabled={accepting}
+      onClick={acceptProposal}
+    >
+      {accepting
+        ? "Preparing agreement..."
+        : accepted
+          ? "Continue to agreement"
+          : "Accept proposal"}
+    </button>
+  );
+
   return (
     <div className="min-h-screen bg-[#090909] text-white">
-      <header className="h-16 border-b border-white/10 flex items-center justify-between px-5 md:px-8 sticky top-0 bg-[#090909]/95 backdrop-blur z-20">
+      <aside className="hidden lg:flex fixed inset-y-0 left-0 w-56 border-r border-white/10 bg-[#090909] z-30 flex-col">
+        <div className="px-6 py-6 border-b border-white/10">
+          <div className="font-semibold tracking-tight text-lg">
+            Kodara <span className="text-[#ef2b2d]">▪</span> Sign
+          </div>
+          <div className="text-[11px] text-white/40 mt-2 tracking-wide">
+            {proposal?.proposalNumber}
+          </div>
+        </div>
+
+        <div className="flex-1 px-6 py-6 flex flex-col justify-end">
+          {!completed ? (
+            <>
+              <div className="mb-4">
+                <div className="text-sm font-medium leading-snug">
+                  {accepted
+                    ? "Proposal accepted"
+                    : `Prepared for ${proposal?.recipientName || "you"}`}
+                </div>
+                <div className="text-[11px] text-white/40 mt-1 break-all">
+                  {proposal?.snapshotHash
+                    ? `Snapshot ${proposal.snapshotHash.slice(0, 12)}`
+                    : ""}
+                </div>
+              </div>
+              {proposalAction}
+              {error ? (
+                <div className="mt-3 text-xs leading-relaxed text-red-400">
+                  {error}
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <div className="text-sm text-white/55 leading-relaxed">
+              Agreement completed. Your copies are being delivered by email.
+            </div>
+          )}
+        </div>
+      </aside>
+
+      <header className="lg:hidden h-16 border-b border-white/10 flex items-center justify-between px-5 md:px-8 sticky top-0 bg-[#090909]/95 backdrop-blur z-20">
         <div className="font-semibold tracking-tight text-lg">
           Kodara <span className="text-[#ef2b2d]">▪</span> Sign
         </div>
         <div className="text-xs text-white/45">{proposal?.proposalNumber}</div>
       </header>
 
-      <main className="max-w-[1100px] mx-auto px-3 md:px-6 py-5 md:py-8 pb-32">
-        {completed ? (
-          <div className="mb-5 border border-emerald-500/30 bg-emerald-500/10 rounded-lg px-4 py-3">
-            <div className="font-semibold">Agreement completed</div>
-            <div className="text-sm text-white/60 mt-1">
-              Your proposal was accepted and your agreement was completed. Your copies are being delivered by email.
+      <main className="lg:pl-56">
+        <div className="max-w-[1100px] mx-auto px-3 md:px-6 py-4 md:py-5 lg:py-4 pb-32 lg:pb-4">
+          {completed ? (
+            <div className="mb-4 border border-emerald-500/30 bg-emerald-500/10 rounded-lg px-4 py-3">
+              <div className="font-semibold">Agreement completed</div>
+              <div className="text-sm text-white/60 mt-1">
+                Your proposal was accepted and your agreement was completed. Your copies are being delivered by email.
+              </div>
             </div>
-          </div>
-        ) : accepted ? (
-          <div className="mb-5 border border-white/15 bg-white/5 rounded-lg px-4 py-3">
-            <div className="font-semibold">Proposal accepted</div>
-            <div className="text-sm text-white/60 mt-1">
-              Continue to the agreement to complete the process.
+          ) : accepted ? (
+            <div className="mb-4 border border-white/15 bg-white/5 rounded-lg px-4 py-3">
+              <div className="font-semibold">Proposal accepted</div>
+              <div className="text-sm text-white/60 mt-1">
+                Continue to the agreement to complete the process.
+              </div>
             </div>
-          </div>
-        ) : null}
+          ) : null}
 
-        <div className="rounded-xl overflow-hidden border border-white/10 bg-[#111] shadow-2xl">
-          <iframe
-            title={proposal?.name || "Proposal"}
-            sandbox=""
-            srcDoc={documentHtml}
-            className="block w-full min-h-[calc(100vh-150px)] bg-[#111]"
-          />
+          <div className="rounded-xl overflow-hidden border border-white/10 bg-[#111] shadow-2xl">
+            <iframe
+              title={proposal?.name || "Proposal"}
+              sandbox=""
+              srcDoc={documentHtml}
+              className="block w-full min-h-[calc(100vh-150px)] lg:min-h-[calc(100vh-32px)] bg-[#111]"
+            />
+          </div>
         </div>
       </main>
 
       {!completed && (
-        <div className="fixed bottom-0 inset-x-0 bg-[#090909]/95 backdrop-blur border-t border-white/10 z-30">
+        <div className="lg:hidden fixed bottom-0 inset-x-0 bg-[#090909]/95 backdrop-blur border-t border-white/10 z-30">
           <div className="max-w-[1100px] mx-auto px-5 md:px-8 py-4 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
             <div>
               <div className="text-sm font-medium">
-                {accepted ? "Proposal accepted" : `Prepared for ${proposal?.recipientName || "you"}`}
+                {accepted
+                  ? "Proposal accepted"
+                  : `Prepared for ${proposal?.recipientName || "you"}`}
               </div>
               <div className="text-xs text-white/45 mt-0.5">
                 {proposal?.snapshotHash
@@ -171,18 +230,7 @@ export default function ProposalViewer() {
                   : ""}
               </div>
             </div>
-            <button
-              type="button"
-              className="op-btn op-btn-primary min-w-[190px]"
-              disabled={accepting}
-              onClick={acceptProposal}
-            >
-              {accepting
-                ? "Preparing agreement..."
-                : accepted
-                  ? "Continue to agreement"
-                  : "Accept proposal"}
-            </button>
+            <div className="sm:min-w-[190px]">{proposalAction}</div>
           </div>
           {error ? (
             <div className="max-w-[1100px] mx-auto px-5 md:px-8 pb-3 text-sm text-red-400">
