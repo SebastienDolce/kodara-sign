@@ -4,6 +4,7 @@ import { promisify } from 'util';
 import { mkdtemp, readFile, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import path from 'path';
+import { PDFDocument } from 'pdf-lib';
 import { cloudServerUrl, getSecureUrl, serverAppId } from '../../Utils.js';
 
 const execFileAsync = promisify(execFile);
@@ -37,11 +38,20 @@ function generatePdfName(length) {
   return result;
 }
 
-function buildDocument(sourceHtml, sourceCss) {
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function buildDocument(sourceHtml, sourceCss, title) {
   const css = String(sourceCss || '').replace(/<\/style/gi, '<\\/style');
   const policy =
     "default-src 'none'; img-src data: blob:; style-src 'unsafe-inline'; font-src data:; script-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'";
-  const headContent = `<meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${policy}"><style>html,body{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}${css}</style>`;
+  const headContent = `<meta charset="utf-8"><title>${escapeHtml(title)}</title><meta http-equiv="Content-Security-Policy" content="${policy}"><style>html,body{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}${css}</style>`;
   const html = String(sourceHtml || '');
 
   if (/<head(?:\s[^>]*)?>/i.test(html)) {
@@ -53,7 +63,7 @@ function buildDocument(sourceHtml, sourceCss) {
   return `<!doctype html><html><head>${headContent}</head><body>${html}</body></html>`;
 }
 
-async function renderWithChromium(html) {
+async function renderWithChromium(html, title) {
   const workDir = await mkdtemp(path.join(tmpdir(), 'opensign-html-'));
   const htmlPath = path.join(workDir, 'template.html');
   const pdfPath = path.join(workDir, 'template.pdf');
@@ -73,7 +83,13 @@ async function renderWithChromium(html) {
       ],
       { timeout: 60_000, maxBuffer: 4 * 1024 * 1024 }
     );
-    return await readFile(pdfPath);
+    const rendered = await readFile(pdfPath);
+    const pdfDoc = await PDFDocument.load(rendered);
+    pdfDoc.setTitle(title);
+    pdfDoc.setAuthor('Kodara');
+    pdfDoc.setCreator('Kodara Sign');
+    pdfDoc.setProducer('Kodara Sign');
+    return Buffer.from(await pdfDoc.save());
   } finally {
     await rm(workDir, { recursive: true, force: true });
   }
@@ -127,8 +143,9 @@ export default async function htmltemplatetopdf(req, res) {
       return res.status(413).json({ error: 'Template CSS is too large.' });
     }
 
-    const documentHtml = buildDocument(htmlSource, cssSource);
-    const pdfBuffer = await runWithLimit(() => renderWithChromium(documentHtml));
+    const title = `${template.Name || 'Kodara Proposal'} — ${theme === 'dark' ? 'Dark' : 'Print-Friendly'}`;
+    const documentHtml = buildDocument(htmlSource, cssSource, title);
+    const pdfBuffer = await runWithLimit(() => renderWithChromium(documentHtml, title));
     const fileName = `${generatePdfName(16)}-${theme}.pdf`;
     const activeFileAdapter = extUser?.TenantId?.ActiveFileAdapter;
     let fileUrl;
