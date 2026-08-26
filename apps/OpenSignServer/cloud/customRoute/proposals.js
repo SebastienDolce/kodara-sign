@@ -5,6 +5,7 @@ import { createHash, randomBytes } from 'crypto';
 import { mkdtemp, readFile, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import path from 'path';
+import { PDFDocument } from 'pdf-lib';
 import { cloudServerUrl, getSecureUrl, serverAppId } from '../../Utils.js';
 
 const execFileAsync = promisify(execFile);
@@ -17,6 +18,13 @@ const renderQueue = [];
 const sha256 = value => createHash('sha256').update(value).digest('hex');
 const normalizeEmail = value => String(value || '').trim().toLowerCase().replace(/\s/g, '');
 const ptr = (className, objectId) => ({ __type: 'Pointer', className, objectId });
+const escapeHtml = value =>
+  String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 
 function runRender(task) {
   return new Promise((resolve, reject) => {
@@ -36,11 +44,11 @@ function runRender(task) {
   });
 }
 
-function buildDocument(sourceHtml, sourceCss) {
+function buildDocument(sourceHtml, sourceCss, title) {
   const css = String(sourceCss || '').replace(/<\/style/gi, '<\\/style');
   const policy =
     "default-src 'none'; img-src data: blob:; style-src 'unsafe-inline'; font-src data:; script-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'";
-  const head = `<meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${policy}"><style>html,body{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}${css}</style>`;
+  const head = `<meta charset="utf-8"><title>${escapeHtml(title)}</title><meta http-equiv="Content-Security-Policy" content="${policy}"><style>html,body{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}${css}</style>`;
   const html = String(sourceHtml || '');
   if (/<head(?:\s[^>]*)?>/i.test(html)) {
     return html.replace(/<head(\s[^>]*)?>/i, match => `${match}${head}`);
@@ -51,7 +59,7 @@ function buildDocument(sourceHtml, sourceCss) {
   return `<!doctype html><html><head>${head}</head><body>${html}</body></html>`;
 }
 
-async function renderPdf(html) {
+async function renderPdf(html, title) {
   return runRender(async () => {
     const workDir = await mkdtemp(path.join(tmpdir(), 'opensign-proposal-'));
     const htmlPath = path.join(workDir, 'proposal.html');
@@ -71,7 +79,13 @@ async function renderPdf(html) {
         ],
         { timeout: 60_000, maxBuffer: 4 * 1024 * 1024 }
       );
-      return await readFile(pdfPath);
+      const rendered = await readFile(pdfPath);
+      const pdfDoc = await PDFDocument.load(rendered);
+      pdfDoc.setTitle(title);
+      pdfDoc.setAuthor('Kodara');
+      pdfDoc.setCreator('Kodara Sign');
+      pdfDoc.setProducer('Kodara Sign');
+      return Buffer.from(await pdfDoc.save());
     } finally {
       await rm(workDir, { recursive: true, force: true });
     }
@@ -236,9 +250,11 @@ export async function sendProposal(req, res) {
     }
 
     const proposalNumber = `KOD-${new Date().getFullYear()}-${randomBytes(3).toString('hex').toUpperCase()}`;
+    const darkTitle = `${proposalNumber} — Accepted Proposal`;
+    const lightTitle = `${proposalNumber} — Print-Friendly Proposal`;
     const [darkPdf, lightPdf] = await Promise.all([
-      renderPdf(buildDocument(html, darkCss)),
-      renderPdf(buildDocument(html, lightCss)),
+      renderPdf(buildDocument(html, darkCss, darkTitle), darkTitle),
+      renderPdf(buildDocument(html, lightCss, lightTitle), lightTitle),
     ]);
     const [darkPdfUrl, lightPdfUrl] = await Promise.all([
       uploadPdf(darkPdf, `${proposalNumber}.pdf`, sender),
@@ -375,6 +391,7 @@ async function createContractForProposal(proposal, token, req) {
     CreatedBy: template.CreatedBy || proposal.CreatedBy,
     OriginIp: req.headers['x-real-ip'] || '',
     SentToOthers: true,
+    IsSendMail: false,
     SendinOrder: template.SendinOrder || false,
     SendInOrderStrict: template.SendInOrderStrict || false,
     IsEnableOTP: template.IsEnableOTP || false,
