@@ -68,6 +68,14 @@ const sidebarList = [
         pageType: "report",
         description: "",
         objectId: "6TeaPr321t"
+      },
+      {
+        icon: "fa-light fa-code",
+        title: "HTML templates",
+        target: "_self",
+        pageType: "",
+        description: "",
+        objectId: "html-template"
       }
     ]
   },
