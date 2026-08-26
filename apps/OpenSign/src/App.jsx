@@ -11,6 +11,7 @@ import ValidateRoute from "./primitives/ValidateRoute";
 import Validate from "./primitives/Validate";
 import TemplatePlaceholder from "./pages/TemplatePlaceholder";
 import HtmlTemplateEditor from "./pages/HtmlTemplateEditor";
+import ProposalViewer from "./pages/ProposalViewer";
 import SignYourSelf from "./pages/SignyourselfPdf";
 import DraftDocument from "./components/pdf/DraftDocument";
 import PlaceHolderSign from "./pages/PlaceHolderSign";
@@ -49,7 +50,6 @@ const AppLoader = () => {
 function App() {
   const [isloading, setIsLoading] = useState(true);
   useEffect(() => {
-    // initialize creds
     const id = process.env.REACT_APP_APPID ?? "opensign";
     localStorage.setItem("parseAppId", id);
     localStorage.setItem("baseUrl", `${serverUrl_fn()}/`);
@@ -68,11 +68,11 @@ function App() {
           <Routes>
             <Route element={<ValidateRoute />}>
               <Route exact path="/" element={<Lazy Page={Login} />} />
-                  <Route path="/addadmin" element={<Lazy Page={AddAdmin} />} />
-                  <Route
-                    path="/upgrade-2.1"
-                    element={<Lazy Page={UpdateExistUserAdmin} />}
-                  />
+              <Route path="/addadmin" element={<Lazy Page={AddAdmin} />} />
+              <Route
+                path="/upgrade-2.1"
+                element={<Lazy Page={UpdateExistUserAdmin} />}
+              />
             </Route>
             <Route element={<Validate />}>
               <Route
@@ -81,21 +81,22 @@ function App() {
                 element={<DragProvider Page={PdfRequestFiles} />}
               />
             </Route>
+            <Route path="/proposal/:token" element={<ProposalViewer />} />
             <Route
               path="/login/:base64url"
               element={<Lazy Page={GuestLogin} />}
             />
             <Route path="/debugpdf" element={<Lazy Page={DebugPdf} />} />
-              <Route
-                path="/forgetpassword"
-                element={<Lazy Page={ForgetPassword} />}
-              />
+            <Route
+              path="/forgetpassword"
+              element={<Lazy Page={ForgetPassword} />}
+            />
             <Route element={<HomeLayout />}>
-                  <Route path="/users" element={<UserList />} />
-                  <Route
-                    path="/changepassword"
-                    element={<Lazy Page={ChangePassword} />}
-                  />
+              <Route path="/users" element={<UserList />} />
+              <Route
+                path="/changepassword"
+                element={<Lazy Page={ChangePassword} />}
+              />
               <Route path="/form/:id" element={<Form />} />
               <Route path="/report/:id" element={<Report />} />
               <Route path="/dashboard/:id" element={<Dashboard />} />
@@ -111,22 +112,18 @@ function App() {
                 path="/template/:templateId"
                 element={<DragProvider Page={TemplatePlaceholder} />}
               />
-              {/* signyouself route with no rowlevel data using docId from url */}
               <Route
                 path="/signaturePdf/:docId"
                 element={<DragProvider Page={SignYourSelf} />}
               />
-              {/* draft document route to handle and navigate route page according to document status */}
               <Route
                 path="/draftDocument"
                 element={<DragProvider Page={DraftDocument} />}
               />
-              {/* recipient placeholder set route with no rowlevel data using docId from url*/}
               <Route
                 path="/placeHolderSign/:docId"
                 element={<DragProvider Page={PlaceHolderSign} />}
               />
-              {/* recipient signature route with no rowlevel data using docId from url */}
               <Route
                 path="/recipientSignPdf/:docId/:contactBookId"
                 element={<DragProvider Page={PdfRequestFiles} />}
