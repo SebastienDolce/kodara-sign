@@ -24,11 +24,16 @@ exports.up = async Parse => {
     .addString('ContractDocumentId')
     .addString('ContactBookId')
     .addString('AcceptedIp')
+    .addString('DeliveryStatus')
+    .addString('DeliveryTokenHash')
     .addDate('SentAt')
     .addDate('AcceptedAt')
+    .addDate('DeliveredAt')
     .addPointer('CreatedBy', '_User')
     .addPointer('ExtUserPtr', 'contracts_Users')
     .addIndex('proposal_public_token_hash_1', { PublicTokenHash: 1 })
+    .addIndex('proposal_delivery_token_hash_1', { DeliveryTokenHash: 1 })
+    .addIndex('proposal_contract_document_id_1', { ContractDocumentId: 1 })
     .addIndex('proposal_number_1', { ProposalNumber: 1 })
     .setCLP({
       get: {},
