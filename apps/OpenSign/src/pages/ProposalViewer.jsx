@@ -187,7 +187,7 @@ export default function ProposalViewer() {
       </header>
 
       <main className="lg:pl-56">
-        <div className="w-full px-3 md:px-4 py-4 md:py-5 lg:py-4 pb-32 lg:pb-4">
+        <div className="max-w-[1100px] mx-auto px-3 md:px-6 py-4 md:py-5 lg:py-4 pb-32 lg:pb-4">
           {completed ? (
             <div className="mb-4 border border-emerald-500/30 bg-emerald-500/10 rounded-lg px-4 py-3">
               <div className="font-semibold">Agreement completed</div>
