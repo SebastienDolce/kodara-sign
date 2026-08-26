@@ -61,7 +61,8 @@ const Submenu = ({ item, closeSidebar, toggleSubmenu, submenuOpen }) => {
                 </span>
                 <span className="mb-0.5">
                   {t(`sidebar.${item.title}-Children.${childItem.title}`, {
-                    appName: drivename
+                    appName: drivename,
+                    defaultValue: childItem.title
                   })}
                 </span>
               </NavLink>

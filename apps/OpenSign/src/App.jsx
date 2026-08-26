@@ -10,6 +10,7 @@ import PageNotFound from "./pages/PageNotFound";
 import ValidateRoute from "./primitives/ValidateRoute";
 import Validate from "./primitives/Validate";
 import TemplatePlaceholder from "./pages/TemplatePlaceholder";
+import HtmlTemplateEditor from "./pages/HtmlTemplateEditor";
 import SignYourSelf from "./pages/SignyourselfPdf";
 import DraftDocument from "./components/pdf/DraftDocument";
 import PlaceHolderSign from "./pages/PlaceHolderSign";
@@ -101,6 +102,11 @@ function App() {
               <Route path="/profile" element={<Lazy Page={UserProfile} />} />
               <Route path="/drive" element={<Lazy Page={Opensigndrive} />} />
               <Route path="/managesign" element={<Lazy Page={ManageSign} />} />
+              <Route path="/html-template" element={<HtmlTemplateEditor />} />
+              <Route
+                path="/html-template/:templateId"
+                element={<HtmlTemplateEditor />}
+              />
               <Route
                 path="/template/:templateId"
                 element={<DragProvider Page={TemplatePlaceholder} />}
