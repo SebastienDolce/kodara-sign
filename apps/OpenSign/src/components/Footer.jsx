@@ -2,12 +2,15 @@ import React, { useEffect, useState } from "react";
 import Package from "../../package.json";
 import axios from "axios";
 import { openInNewTab } from "../constant/Utils";
+import { appInfo } from "../constant/appinfo";
 import { useTranslation } from "react-i18next";
+
 const Footer = () => {
-  const appName = "OpenSign™";
+  const appName = appInfo.appName;
   const { t } = useTranslation();
   const [showButton, setShowButton] = useState(false);
   const [version, setVersion] = useState("");
+
   useEffect(() => {
     axios
       .get("/version.txt")
@@ -41,10 +44,9 @@ const Footer = () => {
   }, []);
 
   const openUrl = () => {
-    openInNewTab(
-      "https://github.com/OpenSignLabs/OpenSign/releases/tag/" + version
-    );
+    openInNewTab("https://github.com/SebastienDolce/kodara-sign");
   };
+
   return (
     <>
       <footer className="op-footer op-footer-center py-3 bg-base-300 text-base-content text-center text-[13px]">
