@@ -8,6 +8,7 @@ import {
   saveFileUsage,
   getSecureUrl,
   appName,
+  brandedNotificationEmail,
   serverAppId,
 } from '../../../Utils.js';
 import GenerateCertificate from './GenerateCertificate.js';
@@ -149,9 +150,6 @@ async function updateDoc(
 async function sendNotifyMail(doc, signUser, mailProvider, publicUrl) {
   try {
     const TenantAppName = appName;
-    const logo =
-      "<img src='https://sign.kodara.dev/kodara-sign-favicon.svg' height='50' alt='Kodara Sign' style='padding:20px'/>";
-
     const auditTrailCount =
       doc?.AuditTrail?.filter(x => COMPLETION_ACTIVITIES.includes(x.Activity))?.length || 0;
     const completionRelevant =
@@ -167,12 +165,14 @@ async function sendNotifyMail(doc, signUser, mailProvider, publicUrl) {
       const signerEmail = signUser.Email;
       const viewDocUrl = `${publicUrl}/recipientSignPdf/${doc.objectId}`;
       const subject = `Document "${pdfName}" has been signed by ${signerName}`;
-      const body =
-        "<html><head><meta http-equiv='Content-Type' content='text/html; charset=UTF-8'/></head><body><div style='background-color:#f5f5f5;padding:20px'><div style='background-color:white'>" +
-        `<div>${logo}</div><div style='padding:2px;font-family:system-ui;background-color:#ef2b2d'><p style='font-size:20px;font-weight:400;color:white;padding-left:20px'>Document signed by ${signerName}</p>` +
-        `</div><div style='padding:20px;font-family:system-ui;font-size:14px'><p>Dear ${creatorName},</p><p>${pdfName} has been signed by ${signerName} "${signerEmail}" successfully</p>` +
-        `<p><a href=${viewDocUrl} target=_blank>View Document</a></p></div></div><div><p>This is an automated email from ${TenantAppName}. For any queries regarding this email, ` +
-        `please contact the sender ${creatorEmail} directly.</p></div></div></body></html>`;
+      const body = brandedNotificationEmail({
+        eyebrow: 'Signature activity',
+        title: 'A signer has completed their step',
+        message: `<p style="margin:0 0 14px;">Dear ${creatorName},</p><p style="margin:0;"><strong style="color:#fff;">${pdfName}</strong> was signed successfully by ${signerName} (${signerEmail}).</p>`,
+        actionUrl: viewDocUrl,
+        actionLabel: 'View document',
+        contactEmail: creatorEmail,
+      });
 
       const params = {
         extUserId: sender.objectId,
@@ -197,9 +197,6 @@ async function sendCompletedMail(obj) {
   const sender = obj.doc.ExtUserPtr;
   const pdfName = doc.Name;
   const TenantAppName = appName;
-  const logo =
-    "<img src='https://sign.kodara.dev/kodara-sign-favicon.svg' height='50' alt='Kodara Sign' style='padding:20px'/>";
-
   let signersMail;
   if (doc?.Signers?.length > 0) {
     const isOwnerExistsinSigners = doc?.Signers?.find(x => x.Email === sender.Email);
@@ -211,11 +208,12 @@ async function sendCompletedMail(obj) {
   }
   const recipient = signersMail;
   let subject = `Document "${pdfName}" has been signed by all parties`;
-  let body =
-    "<html><head><meta http-equiv='Content-Type' content='text/html; charset=UTF-8' /></head><body><div style='background-color:#f5f5f5;padding:20px'><div style='background-color:white'>" +
-    `<div>${logo}</div><div style='padding:2px;font-family:system-ui;background-color:#ef2b2d'><p style='font-size:20px;font-weight:400;color:white;padding-left:20px'>Document signed successfully</p></div><div>` +
-    `<p style='padding:20px;font-family:system-ui;font-size:14px'>All parties have successfully signed the document <b>"${pdfName}"</b>. Kindly download the document from the attachment.</p>` +
-    `</div></div><div><p>This is an automated email from ${TenantAppName}. For any queries regarding this email, please contact the sender ${sender.Email} directly.</p></div></div></body></html>`;
+  let body = brandedNotificationEmail({
+    eyebrow: 'Completed',
+    title: 'Document signed successfully',
+    message: `<p style="margin:0;">All parties have signed <strong style="color:#fff;">${pdfName}</strong>. The completed document is attached to this email.</p>`,
+    contactEmail: sender.Email,
+  });
 
   if (obj?.isCustomMail) {
     const tenant = sender?.TenantId;

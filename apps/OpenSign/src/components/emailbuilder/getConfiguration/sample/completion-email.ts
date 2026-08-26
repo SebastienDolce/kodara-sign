@@ -1,39 +1,33 @@
 import { TEditorConfiguration } from "../../documents/editor/core";
 
-const getCompletionEmail = (
-): TEditorConfiguration => {
+const getCompletionEmail = (): TEditorConfiguration => {
   const appName = "Kodara Sign";
 
-  const logoBlock =
-        {
-          "block-1709571212684": {
-            type: "Image",
-            data: {
-              style: {
-                padding: { top: 24, bottom: 24, right: 24, left: 24 }
-              },
-              props: {
-                width: null,
-                height: 50,
-                url: "https://sign.kodara.dev/kodara-sign-favicon.svg",
-                alt: "Kodara Sign",
-                linkHref: null,
-                contentAlignment: "middle"
-              }
-            }
-          }
-        };
-  const logoBlockId =
-        ["block-1709571212684"];
+  const logoBlock = {
+    "block-1709571212684": {
+      type: "Html",
+      data: {
+        style: {
+          backgroundColor: "#0A0A0A",
+          padding: { top: 28, bottom: 24, right: 28, left: 28 }
+        },
+        props: {
+          contents:
+            '<div style="font-family:Arial,Helvetica,sans-serif;font-size:25px;font-weight:900;letter-spacing:-1px;color:#fff;">KODARA<span style="color:#EF2B2D">.</span><span style="float:right;font-size:11px;letter-spacing:3px;color:#A6A6A6;">SIGN</span></div>'
+        }
+      }
+    }
+  };
+  const logoBlockId = ["block-1709571212684"];
 
   return {
     root: {
       type: "EmailLayout",
       data: {
-        backdropColor: "#f5f5f5",
-        canvasColor: "#FFFFFF",
+        backdropColor: "#111111",
+        canvasColor: "#0A0A0A",
         canvasWidth: 600,
-        textColor: "#242424",
+        textColor: "#EDEDED",
         fontFamily: "MODERN_SANS",
         childrenIds: [
           ...logoBlockId,
@@ -48,9 +42,9 @@ const getCompletionEmail = (
       type: "Text",
       data: {
         style: {
-          color: "#FFFFFF",
-          backgroundColor: "#EF2B2D",
-          fontSize: 20,
+          color: "#EF2B2D",
+          backgroundColor: "#0A0A0A",
+          fontSize: 12,
           fontWeight: "bold",
           padding: {
             top: 16,
@@ -61,7 +55,7 @@ const getCompletionEmail = (
         },
         props: {
           markdown: false,
-          text: "Document signed successfully\n\n"
+          text: "COMPLETED / DOCUMENT SIGNED"
         }
       }
     },
@@ -87,7 +81,7 @@ const getCompletionEmail = (
       type: "Text",
       data: {
         style: {
-          color: "#626363",
+          color: "#EDEDED",
           fontSize: 15,
           fontWeight: "bold",
           padding: {
@@ -124,7 +118,7 @@ const getCompletionEmail = (
       type: "Text",
       data: {
         style: {
-          color: "#626363",
+          color: "#EDEDED",
           fontSize: 15,
           fontWeight: "bold",
           padding: {
@@ -161,7 +155,7 @@ const getCompletionEmail = (
       type: "Text",
       data: {
         style: {
-          color: "#626363",
+          color: "#EDEDED",
           backgroundColor: null,
           fontSize: 15,
           fontWeight: "bold",
@@ -199,7 +193,7 @@ const getCompletionEmail = (
       type: "Text",
       data: {
         style: {
-          color: "#626363",
+          color: "#EDEDED",
           fontSize: 15,
           fontWeight: "bold",
           padding: {
@@ -218,7 +212,8 @@ const getCompletionEmail = (
       type: "Html",
       data: {
         style: {
-          backgroundColor: "#f5f5f5",
+          color: "#A6A6A6",
+          backgroundColor: "#080808",
           fontSize: 14,
           textAlign: null,
           padding: {
@@ -229,7 +224,7 @@ const getCompletionEmail = (
           }
         },
         props: {
-          contents: `This is an automated email from ${appName}. For any queries regarding this email, please contact the sender <a href="mailto:{{sender_mail}}" target="_blank">{{sender_mail}}</a> directly.`
+          contents: `Sent securely with <b>${appName}</b>. Questions about this document should be directed to <a href="mailto:{{sender_mail}}" target="_blank" style="color:#ededed">{{sender_mail}}</a>.`
         }
       }
     },
@@ -237,6 +232,7 @@ const getCompletionEmail = (
       type: "Html",
       data: {
         style: {
+          color: "#C6C6C6",
           fontSize: 14,
           textAlign: null,
           padding: {

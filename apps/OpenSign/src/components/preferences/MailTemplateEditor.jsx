@@ -8,13 +8,10 @@ import { withSessionValidation } from "../../utils";
 import { useDispatch } from "react-redux";
 import { setTenantInfo, setUserInfo } from "../../redux/reducers/userReducer";
 import EmailEditor from "../emaileditor";
+import { appInfo } from "../../constant/appinfo";
 
-const MailTemplateEditor = ({
-  info,
-  tenantId,
-}) => {
-  const appName =
-    "OpenSign™";
+const MailTemplateEditor = ({ info, tenantId }) => {
+  const appName = appInfo.appName;
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const [requestBody, setRequestBody] = useState({ basic: "", advanced: "" });
@@ -39,18 +36,15 @@ const MailTemplateEditor = ({
     completion: "basic"
   });
   const defaultRequestSubject = `{{sender_name}} has requested you to sign {{document_title}}`;
-  const defaultRequestBody = `<p>Hi {{receiver_name}},</p><br><p>We hope this email finds you well. {{sender_name}}&nbsp;has requested you to review and sign&nbsp;{{document_title}}.</p><p>Your signature is crucial to proceed with the next steps as it signifies your agreement and authorization.</p><br><p><a href='{{signing_url}}' rel='noopener noreferrer' target='_blank'>Sign here</a></p><br><br><p>If you have any questions or need further clarification regarding the document or the signing process, please contact the sender.</p><br><p>Thanks</p><p> Team ${appName}</p><br>`;
+  const defaultRequestBody = `<div style="background:#0a0a0a;color:#ededed;font-family:Arial,Helvetica,sans-serif;padding:32px;border:1px solid #292929"><div style="font-size:24px;font-weight:900;color:#fff">KODARA<span style="color:#ef2b2d">.</span><span style="float:right;font-size:11px;letter-spacing:3px;color:#a6a6a6">SIGN</span></div><div style="height:3px;background:#ef2b2d;margin:24px -32px 32px"></div><p style="color:#ef2b2d;font-size:11px;font-weight:700;letter-spacing:3px">ACTION REQUIRED</p><h1 style="color:#fff;font-size:32px">Signature requested</h1><p style="color:#c6c6c6;line-height:1.6">Hi {{receiver_name}},</p><p style="color:#c6c6c6;line-height:1.6"><b style="color:#fff">{{sender_name}}</b> has requested that you review and sign <b style="color:#fff">{{document_title}}</b>.</p><p style="margin-top:28px"><a href="{{signing_url}}" rel="noopener noreferrer" target="_blank" style="display:inline-block;background:#ef2b2d;color:#fff;padding:15px 22px;font-weight:800;text-decoration:none">REVIEW &amp; SIGN</a></p><p style="margin-top:32px;color:#777;font-size:12px">Sent securely with ${appName}.</p></div>`;
   const defaultCompletionSubject = `Document {{document_title}} has been signed by all parties`;
-  const defaultCompletionBody = `<p>Hi {{sender_name}},</p><br><p>All parties have successfully signed the document {{document_title}}. Kindly download the document from the attachment.</p><br><p>Thanks</p><p> Team ${appName}</p><br>`;
-  const cloudfunction =
-        "updatetenant";
+  const defaultCompletionBody = `<div style="background:#0a0a0a;color:#ededed;font-family:Arial,Helvetica,sans-serif;padding:32px;border:1px solid #292929"><div style="font-size:24px;font-weight:900;color:#fff">KODARA<span style="color:#ef2b2d">.</span><span style="float:right;font-size:11px;letter-spacing:3px;color:#a6a6a6">SIGN</span></div><div style="height:3px;background:#ef2b2d;margin:24px -32px 32px"></div><p style="color:#ef2b2d;font-size:11px;font-weight:700;letter-spacing:3px">COMPLETED</p><h1 style="color:#fff;font-size:32px">Document signed successfully</h1><p style="color:#c6c6c6;line-height:1.6">All parties have signed <b style="color:#fff">{{document_title}}</b>. The completed document is attached.</p><p style="margin-top:32px;color:#777;font-size:12px">Sent securely with ${appName}.</p></div>`;
+  const cloudfunction = "updatetenant";
 
   useEffect(() => {
     fetchSubscription();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    info
-  ]);
+  }, [info]);
 
   const handleModifyMail = (mode) => {
     mode === "request"
@@ -58,7 +52,7 @@ const MailTemplateEditor = ({
       : setIsDefaultMail((p) => ({ ...p, completionMail: !p?.completionMail }));
   };
   const fetchSubscription = async () => {
-      await tenantEmailTemplate(info);
+    await tenantEmailTemplate(info);
   };
 
   const tenantEmailTemplate = async (tenantRes) => {
@@ -66,7 +60,6 @@ const MailTemplateEditor = ({
       alert(t("user-not-exist"));
     } else if (tenantRes) {
       const updateRes = tenantRes;
-      const defaultRequestBody = `<p>Hi {{receiver_name}},</p><br><p>We hope this email finds you well. {{sender_name}}&nbsp;has requested you to review and sign&nbsp;{{document_title}}.</p><p>Your signature is crucial to proceed with the next steps as it signifies your agreement and authorization.</p><br><p><a href='{{signing_url}}' rel='noopener noreferrer' target='_blank'>Sign here</a></p><br><br><p>If you have any questions or need further clarification regarding the document or the signing process, please contact the sender.</p><br><p>Thanks</p><p> Team ${appName}</p><br>`;
       if (updateRes?.RequestBody) {
         setRequestBody((p) => ({
           ...p,
@@ -111,8 +104,7 @@ const MailTemplateEditor = ({
   };
 
   const updateValuesInRedux = (subject, body, response) => {
-    const action =
-          setTenantInfo;
+    const action = setTenantInfo;
     const updatedInfo = { ...info };
     updatedInfo[subject] = response?.[subject] ?? "";
     updatedInfo[body] = response?.[body] ?? "";
@@ -186,9 +178,9 @@ const MailTemplateEditor = ({
           localStorage.getItem("Extand_Class") &&
           JSON.parse(localStorage.getItem("Extand_Class"))?.[0];
         if (extUser && extUser?.objectId) {
-            extUser.TenantId.RequestBody = updateRes?.RequestBody;
-            extUser.TenantId.RequestSubject = updateRes?.RequestSubject;
-            extUser.TenantId.EmailEditorType = updateRes?.EmailEditorType;
+          extUser.TenantId.RequestBody = updateRes?.RequestBody;
+          extUser.TenantId.RequestSubject = updateRes?.RequestSubject;
+          extUser.TenantId.EmailEditorType = updateRes?.EmailEditorType;
           const _extUser = JSON.parse(JSON.stringify(extUser));
           localStorage.setItem("Extand_Class", JSON.stringify([_extUser]));
         }
@@ -233,9 +225,9 @@ const MailTemplateEditor = ({
         });
 
         if (extUser && extUser?.objectId) {
-            extUser.TenantId.RequestBody = "";
-            extUser.TenantId.RequestSubject = "";
-            extUser.TenantId.EmailEditorType = emailEditor;
+          extUser.TenantId.RequestBody = "";
+          extUser.TenantId.RequestSubject = "";
+          extUser.TenantId.EmailEditorType = emailEditor;
           const _extUser = JSON.parse(JSON.stringify(extUser));
           localStorage.setItem("Extand_Class", JSON.stringify([_extUser]));
           dispatch(
@@ -272,9 +264,9 @@ const MailTemplateEditor = ({
           }
         });
         if (extUser && extUser?.objectId) {
-            extUser.TenantId.CompletionBody = "";
-            extUser.TenantId.CompletionSubject = "";
-            extUser.TenantId.EmailEditorType = emailEditor;
+          extUser.TenantId.CompletionBody = "";
+          extUser.TenantId.CompletionSubject = "";
+          extUser.TenantId.EmailEditorType = emailEditor;
           const _extUser = JSON.parse(JSON.stringify(extUser));
           localStorage.setItem("Extand_Class", JSON.stringify([_extUser]));
           dispatch(
@@ -323,18 +315,16 @@ const MailTemplateEditor = ({
                 <Loader />
               </div>
             )}
-            {
-                isDefaultMail?.requestMail && (
-                  <div className="absolute backdrop-blur-[2px] flex w-full h-full justify-center items-center bg-black/10 rounded-box select-none z-20">
-                    <button
-                      onClick={() => handleModifyMail("request")}
-                      className="op-btn op-btn-primary shadow-lg"
-                    >
-                      {t("modify")}
-                    </button>
-                  </div>
-                )
-            }
+            {isDefaultMail?.requestMail && (
+              <div className="absolute backdrop-blur-[2px] flex w-full h-full justify-center items-center bg-black/10 rounded-box select-none z-20">
+                <button
+                  onClick={() => handleModifyMail("request")}
+                  className="op-btn op-btn-primary shadow-lg"
+                >
+                  {t("modify")}
+                </button>
+              </div>
+            )}
             <form
               onSubmit={handleSaveRequestEmail}
               className="p-3 border-[1px] border-base-content rounded-box"
@@ -409,18 +399,16 @@ const MailTemplateEditor = ({
                 <Loader />
               </div>
             )}
-            {
-                isDefaultMail?.completionMail && (
-                  <div className="absolute backdrop-blur-[2px] flex w-full h-full justify-center items-center bg-black/10 rounded-box select-none z-20">
-                    <button
-                      onClick={() => handleModifyMail("completion")}
-                      className="op-btn op-btn-primary shadow-lg"
-                    >
-                      {t("modify")}
-                    </button>
-                  </div>
-                )
-            }
+            {isDefaultMail?.completionMail && (
+              <div className="absolute backdrop-blur-[2px] flex w-full h-full justify-center items-center bg-black/10 rounded-box select-none z-20">
+                <button
+                  onClick={() => handleModifyMail("completion")}
+                  className="op-btn op-btn-primary shadow-lg"
+                >
+                  {t("modify")}
+                </button>
+              </div>
+            )}
             <form
               onSubmit={handleSaveCompletionEmail}
               className="p-3 border-[1px] border-base-content rounded-box"
