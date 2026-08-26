@@ -11,14 +11,15 @@ export default function SourceCodeNotice() {
       href={SOURCE_URL}
       target="_blank"
       rel="noopener noreferrer"
-      aria-label="Kodara Sign source code licensed under AGPL-3.0"
-      className={`fixed z-[9999] rounded border border-white/15 bg-black/80 px-2.5 py-1.5 text-[11px] font-medium text-white/70 backdrop-blur hover:border-white/30 hover:text-white ${
+      aria-label="Kodara Sign, modified from OpenSign in August 2026; source code licensed under AGPL-3.0"
+      className={`fixed z-[9999] rounded border border-white/15 bg-black/80 px-2.5 py-1.5 text-[11px] leading-tight text-white/70 backdrop-blur hover:border-white/30 hover:text-white ${
         isProposal
           ? "top-20 right-3 lg:top-auto lg:bottom-3"
           : "bottom-3 left-3"
       }`}
     >
-      Source code · AGPL-3.0
+      <span className="block font-medium">Modified OpenSign · Aug 2026</span>
+      <span className="block mt-0.5">Source code · AGPL-3.0</span>
     </a>
   );
 }
