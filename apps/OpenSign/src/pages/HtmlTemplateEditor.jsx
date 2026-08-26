@@ -26,6 +26,15 @@ const buildPreview = (html, css) => {
   return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${csp}"><style>html,body{margin:0;min-height:100%;}${safeCss}</style></head><body>${safeHtml}</body></html>`;
 };
 
+const authHeaders = () => ({
+  sessiontoken: Parse.User.current().getSessionToken()
+});
+
+const customApiUrl = (path = "") => {
+  const baseApi = localStorage.getItem("baseUrl") || "";
+  return `${removeTrailingSegment(baseApi)}${path}`;
+};
+
 export default function HtmlTemplateEditor() {
   const { templateId } = useParams();
   const navigate = useNavigate();
@@ -48,17 +57,15 @@ export default function HtmlTemplateEditor() {
   );
 
   const loadTemplates = async () => {
-    const query = new Parse.Query("contracts_Template");
-    query.equalTo("TemplateType", "html");
-    query.notEqualTo("IsArchive", true);
-    query.descending("updatedAt");
-    query.limit(100);
-    const rows = await query.find();
+    const response = await axios.get(customApiUrl("/htmltemplates"), {
+      headers: authHeaders()
+    });
+    const rows = response?.data?.templates || [];
     setTemplates(
       rows.map((row) => ({
-        objectId: row.id,
-        Name: row.get("Name") || "Untitled HTML template",
-        updatedAt: row.updatedAt
+        objectId: row.objectId,
+        Name: row.Name || "Untitled HTML template",
+        updatedAt: row.updatedAt ? new Date(row.updatedAt) : null
       }))
     );
   };
@@ -69,16 +76,19 @@ export default function HtmlTemplateEditor() {
       setForm(EMPTY_TEMPLATE);
       return;
     }
-    const query = new Parse.Query("contracts_Template");
-    const row = await query.get(id);
-    if (row.get("TemplateType") !== "html") {
-      throw new Error("This is not an HTML template.");
+    const response = await axios.get(
+      customApiUrl(`/htmltemplates/${encodeURIComponent(id)}`),
+      { headers: authHeaders() }
+    );
+    const row = response?.data?.template;
+    if (!row?.objectId) {
+      throw new Error("Unable to load HTML template.");
     }
     setForm({
-      Name: row.get("Name") || "",
-      HtmlContent: row.get("HtmlContent") || "",
-      DarkCss: row.get("DarkCss") || "",
-      LightCss: row.get("LightCss") || ""
+      Name: row.Name || "",
+      HtmlContent: row.HtmlContent || "",
+      DarkCss: row.DarkCss || "",
+      LightCss: row.LightCss || ""
     });
   };
 
@@ -87,10 +97,15 @@ export default function HtmlTemplateEditor() {
     (async () => {
       try {
         setLoading(true);
+        setMessage("");
         await Promise.all([loadTemplates(), loadTemplate(templateId)]);
       } catch (err) {
         console.error("HTML template load error", err);
-        if (mounted) setMessage(err?.message || "Unable to load HTML template.");
+        if (mounted) {
+          setMessage(
+            err?.response?.data?.error || err?.message || "Unable to load HTML template."
+          );
+        }
       } finally {
         if (mounted) setLoading(false);
       }
@@ -120,10 +135,8 @@ export default function HtmlTemplateEditor() {
     setSaving(true);
     setMessage("");
     try {
-      const baseApi = localStorage.getItem("baseUrl") || "";
-      const url = `${removeTrailingSegment(baseApi)}/savehtmltemplate`;
       const response = await axios.post(
-        url,
+        customApiUrl("/savehtmltemplate"),
         {
           templateId: templateId || undefined,
           Name: form.Name,
@@ -134,7 +147,7 @@ export default function HtmlTemplateEditor() {
         {
           headers: {
             "Content-Type": "application/json",
-            sessiontoken: Parse.User.current().getSessionToken()
+            ...authHeaders()
           }
         }
       );
@@ -142,11 +155,18 @@ export default function HtmlTemplateEditor() {
       if (!savedId) {
         throw new Error("Template save did not return an objectId.");
       }
-      await loadTemplates();
+
       setRenderedPdf(null);
       setMessage("Saved.");
+
       if (!templateId) {
         navigate(`/html-template/${savedId}`, { replace: true });
+      } else {
+        try {
+          await loadTemplates();
+        } catch (listError) {
+          console.error("HTML template list refresh error", listError);
+        }
       }
     } catch (err) {
       console.error("HTML template save error", err);
@@ -167,15 +187,13 @@ export default function HtmlTemplateEditor() {
     setRenderedPdf(null);
     setMessage("");
     try {
-      const baseApi = localStorage.getItem("baseUrl") || "";
-      const url = `${removeTrailingSegment(baseApi)}/htmltemplatetopdf`;
       const response = await axios.post(
-        url,
+        customApiUrl("/htmltemplatetopdf"),
         { templateId, theme },
         {
           headers: {
             "Content-Type": "application/json",
-            sessiontoken: Parse.User.current().getSessionToken()
+            ...authHeaders()
           }
         }
       );
