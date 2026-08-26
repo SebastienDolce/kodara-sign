@@ -25,14 +25,16 @@ function SignerListComponent(props) {
     }
   };
 
+  const signerColor = checkSignerBackColor(props.obj) || "#ef2b2d";
+
   return (
     <div
-      className="rounded-xl mx-1 flex flex-row flex-grow-0 items-center py-[10px] mt-1"
-      style={{ background: checkSignerBackColor(props.obj) }}
+      className="kodara-signer-card mx-1 flex flex-row flex-grow-0 items-center py-[10px] mt-1"
+      style={{ borderLeftColor: signerColor }}
     >
       <div
         style={{ background: checkUserNameColor(props.obj) }}
-        className="flex flex-shrink-0 w-[30px] h-[30px] rounded-full justify-center items-center mx-1"
+        className="kodara-signer-avatar flex flex-shrink-0 w-[30px] h-[30px] justify-center items-center mx-2"
       >
         <span className="text-[12px] text-center font-bold text-black uppercase">
           {getFirstLetter(

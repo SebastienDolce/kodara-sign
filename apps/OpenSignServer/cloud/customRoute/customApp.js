@@ -4,6 +4,16 @@ import dotenv from 'dotenv';
 
 import docxtopdf, { upload as docxUpload } from './docxtopdf.js';
 import decryptpdf, { upload as decryptUpload } from './decryptpdf.js';
+import htmltemplatetopdf from './htmltemplatetopdf.js';
+import savehtmltemplate from './savehtmltemplate.js';
+import { listHtmlTemplates, getHtmlTemplate } from './htmltemplates.js';
+import {
+  listContractTemplates,
+  sendProposal,
+  getPublicProposal,
+  acceptProposal,
+} from './proposals.js';
+import getProposalFile from './proposalFiles.js';
 import { deleteUserByAdmin, deleteUserPost } from './deleteAccount/deleteUser.js';
 import { deleteUserGet } from './deleteAccount/deleteUserGet.js';
 import { deleteUserOtp } from './deleteAccount/deleteUserOtp.js';
@@ -17,6 +27,15 @@ app.use(express.urlencoded({ limit: '100mb', extended: true }));
 
 app.post('/docxtopdf', docxUpload.single('file'), docxtopdf);
 app.post('/decryptpdf', decryptUpload.single('file'), decryptpdf);
+app.post('/htmltemplatetopdf', htmltemplatetopdf);
+app.post('/savehtmltemplate', savehtmltemplate);
+app.get('/htmltemplates', listHtmlTemplates);
+app.get('/htmltemplates/:templateId', getHtmlTemplate);
+app.get('/contracttemplates', listContractTemplates);
+app.post('/proposals', sendProposal);
+app.get('/proposal-public/:token', getPublicProposal);
+app.post('/proposal-public/:token/accept', acceptProposal);
+app.get('/proposal-files/:token/:kind', getProposalFile);
 app.get('/delete-account/:userId', deleteUserGet);
 app.post('/delete-account/:userId/otp', deleteUserOtp);
 app.post('/delete-account/:userId', deleteUserPost);

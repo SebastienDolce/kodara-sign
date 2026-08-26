@@ -80,31 +80,33 @@ module.exports = {
     themes: [
       {
         opensigndark: {
-          primary: "#007ACC", // VS Code blue - CTA & highlight color
+          primary: "#EF2B2D",
           "primary-content": "#FFFFFF",
 
-          secondary: "#1F2937", // Sidebar background (darker slate)
-          "secondary-content": "#E5E7EB",
+          secondary: "#111111",
+          "secondary-content": "#F1F0EC",
 
-          accent: "#4A9EFF", // Lighter VS Code blue for hover, minor CTA
+          accent: "#FF4547",
           "accent-content": "#FFFFFF",
 
-          neutral: "#3C3C3C", // VS Code inactive/disabled element background
-          "neutral-content": "#CCCCCC", // VS Code inactive text color
+          neutral: "#2A2A2A",
+          "neutral-content": "#D6D3CC",
 
-          "base-100": "#121212", // App background
-          "base-200": "#181818", // Slight elevation (cards)
-          "base-300": "#1E1E1E", // Further elevated items (panels)
-          "base-content": "#F3F4F6", // Main text color (soft white)
+          "base-100": "#0A0A0A",
+          "base-200": "#111111",
+          "base-300": "#181818",
+          "base-content": "#EDEDED",
 
           info: "#2563EB", // For info panels like "Out for signature"
           success: "#22C55E", // Optional: for completed docs or alerts
           warning: "#FBBF24",
           error: "#EF4444",
 
-          "--rounded-btn": "1.9rem",
+          "--rounded-box": "0rem",
+          "--rounded-btn": "0rem",
+          "--rounded-badge": "0rem",
           "--tab-border": "2px",
-          "--tab-radius": "0.7rem",
+          "--tab-radius": "0rem",
 
           // Custom CSS variables for icon and button states
           "--icon-color": "#CCCCCC",
@@ -116,24 +118,24 @@ module.exports = {
 
           // Optional polish
           "--navbar-padding": "0.8rem",
-          "--border-color": "#2C2C2C", // Card/table separation
-          "--tooltip-color": "#1F2937"
+          "--border-color": "#292929",
+          "--tooltip-color": "#111111"
         }
       },
       {
         opensigncss: {
-          primary: "#002864",
-          "primary-content": "#cacccf",
-          secondary: "#29354a",
-          "secondary-content": "#c8d1e0",
-          accent: "#E10032",
-          "accent-content": "#ffd8d5",
-          neutral: "#c1ccdb",
-          "neutral-content": "#111312",
-          "base-100": "#ffffff",
-          "base-200": "#dedede",
-          "base-300": "#bebebe",
-          "base-content": "#161616",
+          primary: "#EF2B2D",
+          "primary-content": "#FFFFFF",
+          secondary: "#171717",
+          "secondary-content": "#F1F0EC",
+          accent: "#D82124",
+          "accent-content": "#FFFFFF",
+          neutral: "#D8D4CB",
+          "neutral-content": "#111111",
+          "base-100": "#F4F1EB",
+          "base-200": "#E8E4DC",
+          "base-300": "#D8D4CB",
+          "base-content": "#111111",
           info: "#00b6ff",
           "info-content": "#f5f5f4",
           success: "#00a96e",
@@ -142,9 +144,11 @@ module.exports = {
           "warning-content": "#ccd9e8",
           error: "#ffa1a7",
           "error-content": "#16090a",
-          "--rounded-btn": "1.9rem",
+          "--rounded-box": "0rem",
+          "--rounded-btn": "0rem",
+          "--rounded-badge": "0rem",
           "--tab-border": "2px",
-          "--tab-radius": "0.7rem"
+          "--tab-radius": "0rem"
         }
       }
     ],

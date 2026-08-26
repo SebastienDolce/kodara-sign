@@ -2,6 +2,7 @@ import { useLocation, matchPath } from "react-router";
 import { useTranslation } from "react-i18next";
 import { useMemo } from "react";
 import { useManifestUrl } from "../hook/useManifestUrl";
+import { appInfo } from "../constant/appinfo";
 
 const TITLE_MAP = {
   "/": "login",
@@ -40,8 +41,7 @@ const TITLE_MAP = {
   "/addadmin": "add-admin",
   "/upgrade-2.1": "add-admin",
   "/draftDocument": "New Document",
-  "/login/:base64url": "Request Signatures",
-
+  "/login/:base64url": "Request Signatures"
 };
 
 function resolveTitle(pathname, override) {
@@ -57,9 +57,11 @@ function resolveTitle(pathname, override) {
 export default function Title() {
   const { pathname, state } = useLocation();
   const { t } = useTranslation();
-  const appName =
-    "OpenSign™";
-  const logo = useMemo(() => localStorage.getItem("favicon"), []);
+  const appName = appInfo.appName;
+  const logo = useMemo(
+    () => localStorage.getItem("favicon") || appInfo.fev_Icon,
+    []
+  );
   const prefix = useMemo(
     () => resolveTitle(pathname, state?.title),
     [pathname, state?.title]
@@ -73,8 +75,8 @@ export default function Title() {
   return (
     <>
       <title>{title}</title>
-      <meta name="description" content={title} />
-      {logo && <link rel="icon" type="image/png" href={logo} />}
+      <meta name="description" content={appInfo.metaDescription} />
+      {logo && <link rel="icon" href={logo} />}
       <link rel="manifest" href={manifestUrl} />
     </>
   );

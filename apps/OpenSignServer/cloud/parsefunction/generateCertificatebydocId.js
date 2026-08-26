@@ -8,8 +8,8 @@ import GenerateCertificate from './pdf/GenerateCertificate.js';
 import { getSecureUrl } from '../../Utils.js';
 import { parseUploadFile } from '../../utils/fileUtils.js';
 dotenv.config({ quiet: true });
-const eSignName = 'OpenSign';
-const eSigncontact = 'hello@opensignlabs.com';
+const eSignName = 'Kodara Sign';
+const eSigncontact = 'team@kodara.dev';
 
 // `uploadFile` is used to create url in from pdfFile
 async function uploadFile(pdfName, filepath) {
@@ -39,6 +39,7 @@ async function unlinkCertificate(path) {
 
 export default async function generateCertificatebydocId(req) {
   const docId = req.params.docId;
+  const force = req.params?.force === true || req.params?.force === 'true';
   // const userId = req.headers.userid;
 
   if (!docId) {
@@ -56,15 +57,19 @@ export default async function generateCertificatebydocId(req) {
     );
     const docRes = await getDocument.get(docId, { useMasterKey: true });
 
-    if (docRes && docRes?.get('IsCompleted') && !docRes?.get('CertificateUrl')) {
+    if (docRes && docRes?.get('IsCompleted') && (force || !docRes?.get('CertificateUrl'))) {
       const _docRes = JSON.parse(JSON.stringify(docRes));
-      const filteredaudit = _docRes?.AuditTrail?.filter(x => x?.UserPtr?.objectId);
-      // Create a reversed copy of the array and find the last object with 'signedOn'
+      const filteredaudit = _docRes?.AuditTrail?.filter(x => x?.UserPtr?.objectId) || [];
+      // Create a reversed copy of the array and find the last object with 'SignedOn'
       const lastObj = [...filteredaudit].reverse().find(obj => obj.hasOwnProperty('SignedOn'));
-      const completedAt = lastObj.SignedOn;
+      const completedAt = lastObj?.SignedOn || new Date().toISOString();
       const doc = { ..._docRes, completedAt: completedAt };
       const certificate = await GenerateCertificate(doc);
       const certificatePdf = await PDFDocument.load(certificate);
+      certificatePdf.setTitle('Kodara Sign — Certificate of Completion');
+      certificatePdf.setAuthor('Kodara Sign');
+      certificatePdf.setCreator('Kodara Sign');
+      certificatePdf.setProducer('Kodara Sign');
       const p12 = new P12Signer(P12Buffer, { passphrase: process.env.PASS_PHRASE || null });
       //  `pdflibAddPlaceholder` is used to add code of only digital sign in certificate
       pdflibAddPlaceholder({
@@ -79,20 +84,21 @@ export default async function generateCertificatebydocId(req) {
       const CertificateBuffer = Buffer.from(pdfWithPlaceholderBytes);
       //`new signPDF` create new instance of CertificateBuffer and p12Buffer
       const certificateOBJ = new SignPdf();
-      // `signedCertificate` is used to sign certificate digitally
+      //  `signedCertificate` is used to sign certificate digitally
       const signedCertificate = await certificateOBJ.sign(CertificateBuffer, p12);
 
       //below is used to save signed certificate in exports folder
       fs.writeFileSync(certificatePath, signedCertificate);
-      const file = await uploadFile('certificate.pdf', certificatePath);
+      const file = await uploadFile(`kodara-sign-certificate-${docId}.pdf`, certificatePath);
+      if (!file?.imageUrl) throw new Error('Certificate upload failed.');
       const updateDoc = new Parse.Object('contracts_Document');
       updateDoc.id = doc.objectId;
       updateDoc.set('CertificateUrl', file.imageUrl);
-      const updateDocRes = await updateDoc.save(null, { useMasterKey: true });
+      await updateDoc.save(null, { useMasterKey: true });
       unlinkCertificate(certificatePath);
       return { CertificateUrl: file.imageUrl };
     } else {
-      return { CertificateUrl: '' };
+      return { CertificateUrl: docRes?.get('CertificateUrl') || '' };
     }
   } catch (error) {
     console.error('Error fetching or processing document:', error);

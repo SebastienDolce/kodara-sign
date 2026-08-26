@@ -21,11 +21,10 @@ if (localStorage.getItem("showUpgradeProgress")) {
   showUpgradeProgress();
 }
 
-const savedTheme = localStorage.getItem("theme");
-if (savedTheme === "dark") {
-  document.documentElement.setAttribute("data-theme", "opensigndark");
-}
-
+// Kodara Sign is intentionally dark-only. Ignore and remove any historical
+// OpenSign light/dark preference that may still exist in the browser.
+localStorage.removeItem("theme");
+document.documentElement.setAttribute("data-theme", "opensigndark");
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(

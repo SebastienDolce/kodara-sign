@@ -15,6 +15,7 @@ import Tour from "../primitives/Tour";
 import axios from "axios";
 import Loader from "../primitives/Loader";
 import { useTranslation } from "react-i18next";
+import { appInfo } from "../constant/appinfo";
 
 const DriveBody = lazyWithRetry(
   () => import("../components/opensigndrive/DriveBody")
@@ -29,9 +30,7 @@ const AppLoader = () => {
   );
 };
 function Opensigndrive() {
-  const appName =
-    "OpenSign™";
-  const drivename = appName === "OpenSign™" ? "OpenSign™" : "";
+  const drivename = appInfo.appName;
   const { t } = useTranslation();
   const navigate = useNavigate();
   const scrollRef = useRef(null);

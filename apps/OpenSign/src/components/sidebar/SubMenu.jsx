@@ -1,11 +1,11 @@
 import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 import { NavLink } from "react-router";
+import { appInfo } from "../../constant/appinfo";
 
 const Submenu = ({ item, closeSidebar, toggleSubmenu, submenuOpen }) => {
-  const appName =
-    "OpenSign™";
-  const drivename = appName === "OpenSign™" ? "OpenSign™" : "";
+  const appName = appInfo.appName;
+  const drivename = appName;
   const { t } = useTranslation();
   const { title, icon, children } = item;
   const { selectedMenu } = useSelector((state) => state.sidebar);
@@ -61,7 +61,8 @@ const Submenu = ({ item, closeSidebar, toggleSubmenu, submenuOpen }) => {
                 </span>
                 <span className="mb-0.5">
                   {t(`sidebar.${item.title}-Children.${childItem.title}`, {
-                    appName: drivename
+                    appName: drivename,
+                    defaultValue: childItem.title
                   })}
                 </span>
               </NavLink>

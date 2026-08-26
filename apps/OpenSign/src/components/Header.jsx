@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import dp from "../assets/images/dp.png";
 import FullScreenButton from "./FullScreenButton";
-import ThemeToggle from "./ThemeToggle";
 import { useNavigate } from "react-router";
 import Parse from "parse";
 import { useWindowSize } from "../hook/useWindowSize";
@@ -25,12 +24,12 @@ const Header = ({ isConsole, setIsLoggingOut }) => {
   const image = localStorage.getItem("profileImg") || dp;
   const [isOpen, setIsOpen] = useState(false);
   const [applogo, setAppLogo] = useState("");
-  const [isDarkTheme, setIsDarkTheme] = useState();
 
   const toggleDropdown = () => {
     setIsOpen(!isOpen);
     closeSidebar();
   };
+
   const closeSidebar = () => {
     if (width && width <= 768) {
       dispatch(toggleSidebar(false));
@@ -50,16 +49,16 @@ const Header = ({ isConsole, setIsLoggingOut }) => {
     dispatch(toggleSidebar());
   };
 
-
   async function initializeHead() {
-      const applogo = await getAppLogo();
-      if (applogo?.logo) {
-        setAppLogo(applogo?.logo);
-      } else {
-        const logo = localStorage.getItem("appLogo") || appInfo.applogo;
-        setAppLogo(logo);
-      }
+    const applogo = await getAppLogo();
+    if (applogo?.logo) {
+      setAppLogo(applogo?.logo);
+    } else {
+      const logo = localStorage.getItem("appLogo") || appInfo.applogo;
+      setAppLogo(logo);
+    }
   }
+
   const handleLogout = async () => {
     setIsOpen(false);
     setIsLoggingOut(true);
@@ -91,7 +90,6 @@ const Header = ({ isConsole, setIsLoggingOut }) => {
     navigate("/");
   };
 
-  //handle to close profile drop down menu onclick screen
   useEffect(() => {
     const closeMenuOnOutsideClick = (e) => {
       if (isOpen && !e.target.closest("#profile-menu")) {
@@ -102,31 +100,12 @@ const Header = ({ isConsole, setIsLoggingOut }) => {
     document.addEventListener("click", closeMenuOnOutsideClick);
 
     return () => {
-      // Cleanup the event listener when the component unmounts
       document.removeEventListener("click", closeMenuOnOutsideClick);
     };
   }, [isOpen]);
 
-
-  useEffect(() => {
-    const updateThemeStatus = () => {
-      const isDarkTheme =
-        document.documentElement.getAttribute("data-theme") === "opensigndark";
-      setIsDarkTheme(isDarkTheme);
-    };
-    updateThemeStatus();
-
-    const observer = new MutationObserver(() => {
-      updateThemeStatus();
-    });
-
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["data-theme"]
-    });
-
-    return () => observer.disconnect();
-  }, []);
+  const displayedLogo =
+    applogo === appInfo.applogo ? appInfo.darkLogo : applogo;
 
   return (
     <>
@@ -144,22 +123,18 @@ const Header = ({ isConsole, setIsLoggingOut }) => {
             onClick={() => navigate("/dashboard/35KBoSgoAK")}
             className="h-[25px] md:h-[40px] w-auto overflow-hidden cursor-pointer"
           >
-            {applogo && (
+            {displayedLogo && (
               <img
                 className="object-contain h-full w-auto"
-                src={
-                      isDarkTheme
-                      ? "/static/js/assets/images/logo-dark.png"
-                      : applogo
-                }
-                alt="logo"
+                src={displayedLogo}
+                alt={appInfo.appName}
               />
             )}
           </div>
         </div>
         <div id="profile-menu" className="flex-none gap-2">
           <div>
-              <FullScreenButton />
+            <FullScreenButton />
           </div>
           {width >= 768 && (
             <div
@@ -203,15 +178,11 @@ const Header = ({ isConsole, setIsLoggingOut }) => {
             >
               {!isConsole && (
                 <>
-                    <li
-                      onClick={() =>
-                        openInNewTab("https://docs.opensignlabs.com")
-                      }
-                    >
-                      <span>
-                        <i className="fa-light fa-book"></i> {t("docs")}
-                      </span>
-                    </li>
+                  <li onClick={() => openInNewTab(appInfo.docsUrl)}>
+                    <span>
+                      <i className="fa-light fa-book"></i> {t("docs")}
+                    </span>
+                  </li>
                   <li
                     onClick={() => {
                       setIsOpen(false);
@@ -222,17 +193,17 @@ const Header = ({ isConsole, setIsLoggingOut }) => {
                       <i className="fa-light fa-user"></i> {t("profile")}
                     </span>
                   </li>
-                    <li
-                      onClick={() => {
-                        setIsOpen(false);
-                        navigate("/changepassword");
-                      }}
-                    >
-                      <span>
-                        <i className="fa-light fa-lock"></i>{" "}
-                        {t("change-password")}
-                      </span>
-                    </li>
+                  <li
+                    onClick={() => {
+                      setIsOpen(false);
+                      navigate("/changepassword");
+                    }}
+                  >
+                    <span>
+                      <i className="fa-light fa-lock"></i>{" "}
+                      {t("change-password")}
+                    </span>
+                  </li>
                   <li
                     onClick={() => {
                       setIsOpen(false);
@@ -242,16 +213,6 @@ const Header = ({ isConsole, setIsLoggingOut }) => {
                     <span>
                       <i className="fa-light fa-check-square"></i>{" "}
                       {t("verify-document")}
-                    </span>
-                  </li>
-                  <li>
-                    <span>
-                      <i className="fa-light fa-moon"></i>
-                      {t("dark-mode")}
-                      <span className="text-[10px] font-semibold bg-base-300 text-base-content px-1 rounded-md">
-                        BETA
-                      </span>
-                      <ThemeToggle />
                     </span>
                   </li>
                 </>

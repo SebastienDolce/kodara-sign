@@ -68,24 +68,25 @@ const DocSuccessPage = () => {
         <Confetti width={window.innerWidth} height={window.innerHeight} />
       )}
       {sent ? (
-        <div className="min-h-screen flex flex-col items-center justify-center p-3 md:p-8 text-center">
-          <div className="max-w-lg md:max-w-2xl bg-white rounded-lg shadow-lg p-3 md:p-10">
+        <div className="kodara-login-shell min-h-screen flex flex-col items-center justify-center p-3 md:p-8 text-center">
+          <div className="kodara-login-panel max-w-lg md:max-w-2xl bg-base-100 text-base-content p-3 md:p-10">
             {t("doc-sent")}
           </div>
         </div>
       ) : signed ? (
         <>
-          <div className="min-h-screen flex flex-col items-center justify-center p-3 md:p-8 text-center">
-            <div className="max-w-lg md:max-w-2xl bg-white rounded-lg shadow-lg p-3 md:p-10">
+          <div className="kodara-login-shell min-h-screen flex flex-col items-center justify-center p-3 md:p-8 text-center">
+            <div className="kodara-login-panel max-w-lg md:max-w-2xl bg-base-100 text-base-content p-3 md:p-10">
               <div className="flex flex-col items-center space-y-4 ">
                 <CheckCircle className="text-green-500 w-12 h-12 md:w-14 md:h-14" />
-                <h1 className="text-xl md:text-2xl font-semibold text-gray-800">
+                <p className="kodara-kicker">Kodara Sign</p>
+                <h1 className="text-xl md:text-2xl font-semibold text-base-content">
                   {pdfDetails?.[0]?.IsCompleted
                     ? t("document-has-been-signed")
                     : t("document-has-been-signed-by-you")}
                 </h1>
                 {pdfDetails?.[0]?.IsCompleted && (
-                  <p className="text-sm md:text-base text-gray-600">
+                  <p className="text-sm md:text-base opacity-70">
                     {t("participant-completed-signing")}
                   </p>
                 )}

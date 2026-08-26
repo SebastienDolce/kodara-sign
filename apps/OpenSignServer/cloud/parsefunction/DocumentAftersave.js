@@ -1,3 +1,5 @@
+import handleProposalCompletion from './ProposalCompletion.js';
+
 async function DocumentAftersave(request) {
   try {
     if (!request.original) {
@@ -14,7 +16,6 @@ async function DocumentAftersave(request) {
 
       const signers = obj?.get?.('Signers');
       const hasSigners = Array.isArray(signers) && signers.length > 0;
-      // update acl of New Document If There are signers present in array
       if (hasSigners) {
         await updateAclDoc(objId);
       } else if (objId && request?.user) {
@@ -25,13 +26,13 @@ async function DocumentAftersave(request) {
         const signers = request.object.get('Signers');
         if (signers && signers.length > 0) {
           await updateAclDoc(request.object.id);
-        } else {
-          if (request?.object?.id) {
-            await updateSelfDoc(request.object.id);
-          }
+        } else if (request?.object?.id) {
+          await updateSelfDoc(request.object.id);
         }
       }
     }
+
+    await handleProposalCompletion(request);
   } catch (err) {
     console.log('err in aftersave of contracts_Document');
     console.log(err);
@@ -43,11 +44,8 @@ async function DocumentAftersave(request) {
 
     const doc = await documentQuery.get(objId, { useMasterKey: true });
     if (folder === undefined || folder === 'AIDoc') {
-      // ExpiryDate
       const timeToCompleteDays =
-        folder === undefined
-          ? doc.get('TimeToCompleteDays') || 15 // keep your default=15 only for "undefined folder"
-          : doc.get('TimeToCompleteDays'); // keep original behavior for AIDoc (no forced default)
+        folder === undefined ? doc.get('TimeToCompleteDays') || 15 : doc.get('TimeToCompleteDays');
 
       if (typeof timeToCompleteDays === 'number' && createdAt) {
         const expiryDate = new Date(createdAt);
@@ -55,12 +53,10 @@ async function DocumentAftersave(request) {
         doc.set('ExpiryDate', expiryDate);
       }
 
-      // OriginIp
       if (!originIp) {
         doc.set('OriginIp', ip);
       }
 
-      // Automatic reminders
       const autoReminder = doc.get('AutomaticReminders') || false;
       if (autoReminder && createdAt) {
         const remindOnceInEvery = doc.get('RemindOnceInEvery') || 5;

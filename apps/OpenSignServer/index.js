@@ -4,6 +4,7 @@ import express from 'express';
 import cors from 'cors';
 import { ParseServer } from 'parse-server';
 import path from 'path';
+import net from 'node:net';
 const __dirname = path.resolve();
 import http from 'http';
 import formData from 'form-data';
@@ -176,17 +177,61 @@ app.use(function (req, res, next) {
   req.headers['public_url'] = publicUrl;
   next();
 });
-function getUserIP(request) {
-  let forwardedFor = request.headers['x-forwarded-for'];
-  if (forwardedFor) {
-    if (forwardedFor.indexOf(',') > -1) {
-      return forwardedFor.split(',')[0];
-    } else {
-      return forwardedFor;
-    }
+
+function normalizeIp(value) {
+  if (!value) return '';
+  let ip = String(value).trim().replace(/^"|"$/g, '');
+  if (!ip) return '';
+
+  if (ip.startsWith('[')) {
+    const close = ip.indexOf(']');
+    if (close > 0) ip = ip.slice(1, close);
   } else {
-    return request.socket.remoteAddress;
+    const ipv4WithPort = ip.match(/^(\d{1,3}(?:\.\d{1,3}){3}):\d+$/);
+    if (ipv4WithPort) ip = ipv4WithPort[1];
   }
+
+  if (ip.toLowerCase().startsWith('::ffff:')) ip = ip.slice(7);
+  return net.isIP(ip) ? ip : '';
+}
+
+function isPrivateIp(ip) {
+  const version = net.isIP(ip);
+  if (version === 4) {
+    const octets = ip.split('.').map(Number);
+    return (
+      octets[0] === 10 ||
+      octets[0] === 127 ||
+      (octets[0] === 169 && octets[1] === 254) ||
+      (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) ||
+      (octets[0] === 192 && octets[1] === 168) ||
+      octets[0] === 0
+    );
+  }
+  if (version === 6) {
+    const lower = ip.toLowerCase();
+    return lower === '::1' || lower === '::' || lower.startsWith('fc') || lower.startsWith('fd') || lower.startsWith('fe8') || lower.startsWith('fe9') || lower.startsWith('fea') || lower.startsWith('feb');
+  }
+  return true;
+}
+
+function getUserIP(request) {
+  const candidates = [];
+  const add = value => {
+    if (Array.isArray(value)) value.forEach(add);
+    else if (value) String(value).split(',').forEach(item => candidates.push(item));
+  };
+
+  // These headers are set by the trusted reverse-proxy chain. Prefer a real
+  // public client address over Docker/private hop addresses.
+  add(request.headers['cf-connecting-ip']);
+  add(request.headers['true-client-ip']);
+  add(request.headers['x-real-ip']);
+  add(request.headers['x-forwarded-for']);
+  add(request.socket?.remoteAddress);
+
+  const valid = candidates.map(normalizeIp).filter(Boolean);
+  return valid.find(ip => !isPrivateIp(ip)) || valid[0] || '';
 }
 
 app.use(async function (req, res, next) {

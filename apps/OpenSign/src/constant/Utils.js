@@ -4221,32 +4221,32 @@ function _removeWidgetAnnotations(pdfDoc) {
 }
 
 export const mailTemplate = (param) => {
-  const appName = "OpenSign™";
-  const logo = `<div style='padding:10px'><img src='https://qikinnovation.ams3.digitaloceanspaces.com/logo.png' height='50' /></div>`;
-
   const subject = `${param.senderName} has requested you to sign "${param.title}"`;
-  const body =
-    "<html><head><meta http-equiv='Content-Type' content='text/html;charset=UTF-8' /></head><body><div style='background-color:#f5f5f5;padding:20px'><div style='background:white;padding-bottom:20px'>" +
-    logo +
-    `<div style='padding:2px;font-family:system-ui;background-color:${themeColor}'><p style='font-size:20px;font-weight:400;color:white;padding-left:20px'>Digital Signature Request</p></div><div><p style='padding:20px;font-size:14px;margin-bottom:10px'>` +
-    param.senderName +
-    " has requested you to review and sign <strong>" +
-    param.title +
-    "</strong>.</p><div style='padding: 5px 0px 5px 25px;display:flex;flex-direction:row;justify-content:space-around'><table><tr><td style='font-weight:bold;font-family:sans-serif;font-size:15px'>Sender</td><td></td><td style='color:#626363;font-weight:bold'>" +
-    param.senderMail +
-    "</td></tr><tr><td style='font-weight:bold;font-family:sans-serif;font-size:15px'>Organization</td><td></td><td style='color:#626363;font-weight:bold'> " +
-    param.organization +
-    "</td></tr><tr><td style='font-weight:bold;font-family:sans-serif;font-size:15px'>Expires on</td><td></td><td style='color:#626363;font-weight:bold'>" +
-    param.localExpireDate +
-    "</td></tr><tr><td style='font-weight:bold;font-family:sans-serif;font-size:15px'>Note</td><td></td><td style='color:#626363;font-weight:bold'>" +
-    param.note +
-    "</td></tr><tr><td></td><td></td></tr></table></div> <div style='margin-left:70px'><a target=_blank href=" +
-    param.signingUrl +
-    "><button style='padding:12px;background-color:#d46b0f;color:white;border:0px;font-weight:bold;margin-top:30px'>Sign here</button></a></div><div style='display:flex;justify-content:center;margin-top:10px'></div></div></div><div><p> This is an automated email from " +
-    appName +
-    ". For any queries regarding this email, please contact the sender " +
-    param.senderMail +
-    " directly.</p></div></div></body></html> ";
+  const body = `<!doctype html>
+<html><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8" /></head>
+<body style="margin:0;padding:0;background:#111111;color:#ededed;font-family:Arial,Helvetica,sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#111111;">
+    <tr><td align="center" style="padding:32px 16px;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:640px;background:#0a0a0a;border:1px solid #292929;">
+        <tr><td style="padding:28px 32px 24px;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr><td style="font-size:25px;font-weight:900;letter-spacing:-1px;color:#ffffff;">KODARA<span style="color:#ef2b2d;">.</span></td><td align="right" style="font-size:11px;font-weight:700;letter-spacing:3px;color:#a6a6a6;">SIGN</td></tr></table></td></tr>
+        <tr><td style="height:3px;background:#ef2b2d;font-size:0;line-height:0;">&nbsp;</td></tr>
+        <tr><td style="padding:42px 32px 36px;">
+          <p style="margin:0 0 14px;color:#ef2b2d;font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;">Action required</p>
+          <h1 style="margin:0 0 20px;color:#ffffff;font-size:34px;line-height:1.05;letter-spacing:-1.5px;">Signature requested</h1>
+          <p style="margin:0 0 30px;color:#c6c6c6;font-size:16px;line-height:1.6;"><strong style="color:#ffffff;">${param.senderName}</strong> has requested that you review and sign <strong style="color:#ffffff;">${param.title}</strong>.</p>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-top:1px solid #333333;border-bottom:1px solid #333333;">
+            <tr><td style="padding:13px 0;color:#858585;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;">Sender</td><td align="right" style="padding:13px 0;color:#ededed;font-size:14px;">${param.senderMail}</td></tr>
+            <tr><td style="padding:13px 0;border-top:1px solid #242424;color:#858585;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;">Organization</td><td align="right" style="padding:13px 0;border-top:1px solid #242424;color:#ededed;font-size:14px;">${param.organization || "—"}</td></tr>
+            <tr><td style="padding:13px 0;border-top:1px solid #242424;color:#858585;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;">Expires</td><td align="right" style="padding:13px 0;border-top:1px solid #242424;color:#ededed;font-size:14px;">${param.localExpireDate}</td></tr>
+            <tr><td style="padding:13px 0;border-top:1px solid #242424;color:#858585;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;">Note</td><td align="right" style="padding:13px 0;border-top:1px solid #242424;color:#ededed;font-size:14px;">${param.note || "—"}</td></tr>
+          </table>
+          <p style="margin:32px 0 0;"><a href="${param.signingUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:15px 22px;background:#ef2b2d;color:#ffffff;font-size:13px;font-weight:800;letter-spacing:1.5px;text-decoration:none;text-transform:uppercase;">Review &amp; sign</a></p>
+        </td></tr>
+        <tr><td style="padding:20px 32px;border-top:1px solid #292929;background:#080808;color:#777777;font-size:12px;line-height:1.6;">Sent securely with <strong style="color:#bdbdbd;">Kodara Sign</strong>. Questions about this document should be directed to <a href="mailto:${param.senderMail}" style="color:#ededed;">${param.senderMail}</a>.</td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
   return { subject, body };
 };
 
