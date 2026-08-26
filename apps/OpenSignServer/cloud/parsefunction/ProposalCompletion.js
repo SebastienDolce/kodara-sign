@@ -84,7 +84,7 @@ export default async function handleProposalCompletion(request) {
     const senderEmail = createdBy?.get?.('email') || '';
     if (!recipientEmail) throw new Error('Proposal recipient email is missing.');
 
-    const fileBase = `${publicBase}/proposal-files/${deliveryToken}`;
+    const fileBase = `${publicBase}/api/proposal-files/${deliveryToken}`;
     const acceptedProposalUrl = `${fileBase}/proposal`;
     const printProposalUrl = `${fileBase}/print`;
     const signedContractUrl = `${fileBase}/contract`;
