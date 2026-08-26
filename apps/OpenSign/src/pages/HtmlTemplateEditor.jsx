@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import Parse from "parse";
+import axios from "axios";
 import DOMPurify from "dompurify";
 import Loader from "../primitives/Loader";
+import { removeTrailingSegment } from "../constant/Utils";
 import { withSessionValidation } from "../utils";
 
 const EMPTY_TEMPLATE = {
@@ -32,6 +34,8 @@ export default function HtmlTemplateEditor() {
   const [previewTheme, setPreviewTheme] = useState("dark");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [renderingTheme, setRenderingTheme] = useState("");
+  const [renderedPdf, setRenderedPdf] = useState(null);
   const [message, setMessage] = useState("");
 
   const preview = useMemo(
@@ -60,6 +64,7 @@ export default function HtmlTemplateEditor() {
   };
 
   const loadTemplate = async (id) => {
+    setRenderedPdf(null);
     if (!id) {
       setForm(EMPTY_TEMPLATE);
       return;
@@ -97,6 +102,7 @@ export default function HtmlTemplateEditor() {
   }, [templateId]);
 
   const updateField = (field, value) => {
+    setRenderedPdf(null);
     setForm((current) => ({ ...current, [field]: value }));
   };
 
@@ -145,6 +151,7 @@ export default function HtmlTemplateEditor() {
       object.set("IsArchive", false);
       const saved = await object.save();
       await loadTemplates();
+      setRenderedPdf(null);
       setMessage("Saved.");
       if (!templateId) {
         navigate(`/html-template/${saved.id}`, { replace: true });
@@ -154,6 +161,42 @@ export default function HtmlTemplateEditor() {
       setMessage(err?.message || "Unable to save HTML template.");
     } finally {
       setSaving(false);
+    }
+  });
+
+  const renderPdf = withSessionValidation(async (theme) => {
+    if (!templateId) {
+      setMessage("Save the template before rendering a PDF.");
+      return;
+    }
+    setRenderingTheme(theme);
+    setRenderedPdf(null);
+    setMessage("");
+    try {
+      const baseApi = localStorage.getItem("baseUrl") || "";
+      const url = `${removeTrailingSegment(baseApi)}/htmltemplatetopdf`;
+      const response = await axios.post(
+        url,
+        { templateId, theme },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            sessiontoken: Parse.User.current().getSessionToken()
+          }
+        }
+      );
+      if (!response?.data?.url) {
+        throw new Error("Renderer did not return a PDF URL.");
+      }
+      setRenderedPdf({ theme, url: response.data.url });
+      setMessage(`${theme === "dark" ? "Dark" : "Light"} PDF rendered.`);
+    } catch (err) {
+      console.error("HTML template render error", err);
+      setMessage(
+        err?.response?.data?.error || err?.message || "Unable to render PDF."
+      );
+    } finally {
+      setRenderingTheme("");
     }
   });
 
@@ -244,7 +287,7 @@ export default function HtmlTemplateEditor() {
             <button
               className="op-btn op-btn-primary"
               type="submit"
-              disabled={saving}
+              disabled={saving || Boolean(renderingTheme)}
             >
               {saving ? "Saving..." : "Save template"}
             </button>
@@ -287,6 +330,34 @@ export default function HtmlTemplateEditor() {
             srcDoc={preview}
             className="w-full min-h-[760px] rounded border border-base-content/10 bg-white"
           />
+          <div className="flex flex-wrap items-center gap-2 mt-3">
+            <button
+              type="button"
+              className="op-btn op-btn-sm"
+              disabled={!templateId || saving || Boolean(renderingTheme)}
+              onClick={() => renderPdf("dark")}
+            >
+              {renderingTheme === "dark" ? "Rendering..." : "Render dark PDF"}
+            </button>
+            <button
+              type="button"
+              className="op-btn op-btn-sm"
+              disabled={!templateId || saving || Boolean(renderingTheme)}
+              onClick={() => renderPdf("light")}
+            >
+              {renderingTheme === "light" ? "Rendering..." : "Render light PDF"}
+            </button>
+            {renderedPdf?.url ? (
+              <a
+                className="op-btn op-btn-sm op-btn-primary"
+                href={renderedPdf.url}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Open {renderedPdf.theme} PDF
+              </a>
+            ) : null}
+          </div>
         </section>
       </div>
     </div>
