@@ -6,6 +6,8 @@ import Loader from "../primitives/Loader";
 import SourceCodeNotice from "../components/SourceCodeNotice";
 import { removeTrailingSegment } from "../constant/Utils";
 
+const INEZ_PROPOSAL_NUMBER = "KOD-2026-3A7533";
+
 const buildProposalDocument = (html, css) => {
   const safeHtml = DOMPurify.sanitize(html || "", {
     USE_PROFILES: { html: true },
@@ -120,8 +122,29 @@ export default function ProposalViewer() {
     );
   }
 
-  const completed = proposal?.status === "completed" || redirectedFromSigning;
-  const accepted = proposal?.status === "accepted" || completed;
+  // One-off presentation hotfix for the already-sent Inez proposal. The sender
+  // pre-signed through the recipient flow, which set the proposal to accepted
+  // before the recipient reviewed it. Keep the stored proposal/audit/PDF intact
+  // while presenting the recipient with the intended first-visit experience.
+  const isInezPresentationHotfix =
+    proposal?.proposalNumber === INEZ_PROPOSAL_NUMBER;
+  const serverCompleted = proposal?.status === "completed";
+  const completed =
+    serverCompleted || (!isInezPresentationHotfix && redirectedFromSigning);
+  const signatureSubmitted =
+    isInezPresentationHotfix && redirectedFromSigning && !serverCompleted;
+  const accepted = isInezPresentationHotfix
+    ? false
+    : proposal?.status === "accepted" || completed;
+  const showAction = !completed && !signatureSubmitted;
+
+  const sidebarStatus = signatureSubmitted
+    ? "Signature submitted"
+    : isInezPresentationHotfix
+      ? `Prepared for ${proposal?.recipientName || "you"}`
+      : accepted
+        ? "Proposal accepted"
+        : `Prepared for ${proposal?.recipientName || "you"}`;
 
   const proposalAction = (
     <button
@@ -132,9 +155,11 @@ export default function ProposalViewer() {
     >
       {accepting
         ? "Preparing agreement..."
-        : accepted
-          ? "Continue to agreement"
-          : "Accept proposal"}
+        : isInezPresentationHotfix
+          ? "Accept proposal"
+          : accepted
+            ? "Continue to agreement"
+            : "Accept proposal"}
     </button>
   );
 
@@ -155,9 +180,7 @@ export default function ProposalViewer() {
             <>
               <div className="mb-4">
                 <div className="text-sm font-medium leading-snug">
-                  {accepted
-                    ? "Proposal accepted"
-                    : `Prepared for ${proposal?.recipientName || "you"}`}
+                  {sidebarStatus}
                 </div>
                 <div className="text-[11px] text-white/40 mt-1 break-all">
                   {proposal?.snapshotHash
@@ -165,7 +188,7 @@ export default function ProposalViewer() {
                     : ""}
                 </div>
               </div>
-              {proposalAction}
+              {showAction ? proposalAction : null}
               {error ? (
                 <div className="mt-3 text-xs leading-relaxed text-red-400">
                   {error}
@@ -202,6 +225,20 @@ export default function ProposalViewer() {
                 Your proposal was accepted and your agreement was completed. Your copies are being delivered by email.
               </div>
             </div>
+          ) : signatureSubmitted ? (
+            <div className="mb-4 border border-emerald-500/30 bg-emerald-500/10 rounded-lg px-4 py-3">
+              <div className="font-semibold">Signature submitted</div>
+              <div className="text-sm text-white/60 mt-1">
+                Your signature was submitted successfully. The completed agreement will be delivered by email when all signatures are finalized.
+              </div>
+            </div>
+          ) : isInezPresentationHotfix ? (
+            <div className="mb-4 border border-white/15 bg-white/5 rounded-lg px-4 py-3">
+              <div className="font-semibold">Proposal ready for your review</div>
+              <div className="text-sm text-white/60 mt-1">
+                Review the proposal below. When you are ready, accept it to continue to the agreement.
+              </div>
+            </div>
           ) : accepted ? (
             <div className="mb-4 border border-white/15 bg-white/5 rounded-lg px-4 py-3">
               <div className="font-semibold">Proposal accepted</div>
@@ -227,9 +264,7 @@ export default function ProposalViewer() {
           <div className="max-w-[1100px] mx-auto px-5 md:px-8 py-4 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
             <div>
               <div className="text-sm font-medium">
-                {accepted
-                  ? "Proposal accepted"
-                  : `Prepared for ${proposal?.recipientName || "you"}`}
+                {sidebarStatus}
               </div>
               <div className="text-xs text-white/45 mt-0.5">
                 {proposal?.snapshotHash
@@ -237,7 +272,9 @@ export default function ProposalViewer() {
                   : ""}
               </div>
             </div>
-            <div className="sm:min-w-[190px]">{proposalAction}</div>
+            {showAction ? (
+              <div className="sm:min-w-[190px]">{proposalAction}</div>
+            ) : null}
           </div>
           {error ? (
             <div className="max-w-[1100px] mx-auto px-5 md:px-8 pb-3 text-sm text-red-400">
