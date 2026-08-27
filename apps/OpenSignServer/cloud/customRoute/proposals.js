@@ -197,8 +197,10 @@ async function ensureContact(sender, name, email) {
 }
 
 function oneSignerRole(template) {
-  const roles = (template?.Placeholders || []).filter(item => item?.Role !== 'prefill');
-  return roles.length === 1;
+  const roles = (template?.Placeholders || []).filter(
+    item => String(item?.Role || '').toLowerCase() !== 'prefill'
+  );
+  return roles.length > 0;
 }
 
 export async function listContractTemplates(req, res) {
@@ -237,7 +239,7 @@ export async function sendProposal(req, res) {
     }
     const contractTemplate = await getOwnedTemplate(contractTemplateId, sender);
     if (contractTemplate.TemplateType === 'html' || !contractTemplate.URL || !oneSignerRole(contractTemplate)) {
-      return res.status(400).json({ error: 'Contract template must be a normal OpenSign template with exactly one signer role.' });
+      return res.status(400).json({ error: 'Contract template must be a normal OpenSign template with at least one signer role.' });
     }
 
     const html = String(htmlTemplate.HtmlContent || '');
@@ -369,7 +371,7 @@ async function createContractForProposal(proposal, token, req) {
   );
   const template = templateRes?.data;
   if (!template?.URL || !oneSignerRole(template)) {
-    throw new Error('Contract template is no longer available or is not a one-signer template.');
+    throw new Error('Contract template is no longer available or has no signer roles.');
   }
   const contactRes = await axios.get(
     `${cloudServerUrl}/classes/contracts_Contactbook/${encodeURIComponent(proposal.ContactBookId)}?include=UserId`,
@@ -379,10 +381,64 @@ async function createContractForProposal(proposal, token, req) {
   if (!contact?.objectId || !contact?.UserId?.objectId) throw new Error('Proposal recipient contact is unavailable.');
 
   const contactPtr = ptr('contracts_Contactbook', contact.objectId);
-  const placeholders = JSON.parse(JSON.stringify(template.Placeholders || [])).map(role => {
-    if (role?.Role === 'prefill') return role;
-    return { ...role, signerPtr: contactPtr, signerObjId: contact.objectId };
+  const sourcePlaceholders = JSON.parse(JSON.stringify(template.Placeholders || []));
+  const signerRoles = sourcePlaceholders.filter(
+    role => String(role?.Role || '').toLowerCase() !== 'prefill'
+  );
+  const assignedSignerIds = [
+    ...new Set(
+      signerRoles
+        .map(role => role?.signerObjId || role?.signerPtr?.objectId)
+        .filter(Boolean)
+    ),
+  ];
+  const recipientSignerIds = new Set([contact.objectId]);
+
+  if (assignedSignerIds.length) {
+    const where = JSON.stringify({ objectId: { $in: assignedSignerIds } });
+    const assignedContactsRes = await axios.get(
+      `${cloudServerUrl}/classes/contracts_Contactbook?where=${encodeURIComponent(where)}&limit=100&keys=Email`,
+      { headers }
+    );
+    for (const assignedContact of assignedContactsRes?.data?.results || []) {
+      if (normalizeEmail(assignedContact?.Email) === normalizeEmail(proposal.RecipientEmail)) {
+        recipientSignerIds.add(assignedContact.objectId);
+      }
+    }
+  }
+
+  const isRecipientRole = role => {
+    const signerId = role?.signerObjId || role?.signerPtr?.objectId;
+    return Boolean(signerId && recipientSignerIds.has(signerId));
+  };
+  const matchedRecipientRoles = signerRoles.filter(isRecipientRole);
+  if (signerRoles.length > 1 && matchedRecipientRoles.length === 0) {
+    throw new Error(
+      'The proposal recipient email must match a contact already assigned to a signer role in the contract template.'
+    );
+  }
+
+  const placeholders = sourcePlaceholders.map(role => {
+    if (String(role?.Role || '').toLowerCase() === 'prefill') return role;
+    if (signerRoles.length === 1 || isRecipientRole(role)) {
+      return { ...role, signerPtr: contactPtr, signerObjId: contact.objectId };
+    }
+    return role;
   });
+
+  const signers = [];
+  const seenSignerIds = new Set();
+  for (const role of placeholders) {
+    if (String(role?.Role || '').toLowerCase() === 'prefill') continue;
+    const signerId = role?.signerObjId || role?.signerPtr?.objectId;
+    if (!signerId) {
+      throw new Error('Every signer role in the contract template must be assigned to a contact.');
+    }
+    if (seenSignerIds.has(signerId)) continue;
+    seenSignerIds.add(signerId);
+    signers.push(role?.signerPtr?.objectId ? role.signerPtr : ptr('contracts_Contactbook', signerId));
+  }
+
   const publicBase = req.headers['public_url'] || `https://${req.get('host')}`;
   const document = {
     Name: template.Name || `${proposal.ProposalNumber} Agreement`,
@@ -402,7 +458,7 @@ async function createContractForProposal(proposal, token, req) {
     TimeToCompleteDays: Number(template.TimeToCompleteDays || 15),
     RemindOnceInEvery: Number(template.RemindOnceInEvery || 5),
     RedirectUrl: `${publicBase}/proposal/${token}?signed=1`,
-    Signers: [contactPtr],
+    Signers: signers,
     Placeholders: placeholders,
     SignatureType: template.SignatureType || [],
     DocSentAt: { __type: 'Date', iso: new Date().toISOString() },
