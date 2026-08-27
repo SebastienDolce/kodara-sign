@@ -7,6 +7,14 @@ import SourceCodeNotice from "../components/SourceCodeNotice";
 import { removeTrailingSegment } from "../constant/Utils";
 
 const INEZ_PROPOSAL_NUMBER = "KOD-2026-3A7533";
+const INEZ_PROPOSAL_VIEWER_CSS = `
+@media screen {
+  .page {
+    width: 100% !important;
+    max-width: none !important;
+  }
+}
+`;
 
 const buildProposalDocument = (html, css) => {
   const safeHtml = DOMPurify.sanitize(html || "", {
@@ -75,10 +83,15 @@ export default function ProposalViewer() {
     };
   }, [token]);
 
-  const documentHtml = useMemo(
-    () => buildProposalDocument(proposal?.html, proposal?.darkCss),
-    [proposal]
-  );
+  const isInezPresentationHotfix =
+    proposal?.proposalNumber === INEZ_PROPOSAL_NUMBER;
+
+  const documentHtml = useMemo(() => {
+    const viewerCss = isInezPresentationHotfix
+      ? `${proposal?.darkCss || ""}\n${INEZ_PROPOSAL_VIEWER_CSS}`
+      : proposal?.darkCss;
+    return buildProposalDocument(proposal?.html, viewerCss);
+  }, [proposal, isInezPresentationHotfix]);
 
   const acceptProposal = async () => {
     setAccepting(true);
@@ -126,8 +139,6 @@ export default function ProposalViewer() {
   // pre-signed through the recipient flow, which set the proposal to accepted
   // before the recipient reviewed it. Keep the stored proposal/audit/PDF intact
   // while presenting the recipient with the intended first-visit experience.
-  const isInezPresentationHotfix =
-    proposal?.proposalNumber === INEZ_PROPOSAL_NUMBER;
   const serverCompleted = proposal?.status === "completed";
   const completed =
     serverCompleted || (!isInezPresentationHotfix && redirectedFromSigning);
