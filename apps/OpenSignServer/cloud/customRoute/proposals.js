@@ -352,6 +352,7 @@ export async function getPublicProposal(req, res) {
         recipientName: proposal.RecipientName,
         html: proposal.HtmlContent,
         darkCss: proposal.DarkCss,
+        lightCss: proposal.LightCss,
         snapshotHash: proposal.SnapshotHash,
         sentAt: proposal.SentAt,
         acceptedAt: proposal.AcceptedAt,
