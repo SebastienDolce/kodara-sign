@@ -2,18 +2,23 @@ import { useLocation } from "react-router";
 
 const SOURCE_URL = "https://github.com/SebastienDolce/kodara-sign";
 
-export default function SourceCodeNotice({ variant = "floating" }) {
+export default function SourceCodeNotice({ variant = "floating", theme = "dark" }) {
   const { pathname } = useLocation();
   const isProposal = pathname.startsWith("/proposal/");
+  const isLight = theme === "light";
 
   // Proposal pages render their own non-overlay notice inside the proposal UI.
   if (variant === "floating" && isProposal) return null;
 
   const variantClass =
     variant === "sidebar"
-      ? "block w-full border-t border-white/10 pt-4 text-[10px] leading-tight text-white/45 hover:text-white/75"
+      ? isLight
+        ? "block w-full border-t border-black/10 pt-4 text-[10px] leading-tight text-black/45 hover:text-black/70"
+        : "block w-full border-t border-white/10 pt-4 text-[10px] leading-tight text-white/45 hover:text-white/75"
       : variant === "compact"
-        ? "inline-block text-[9px] leading-tight text-white/40 hover:text-white/70"
+        ? isLight
+          ? "inline-block text-[9px] leading-tight text-black/45 hover:text-black/70"
+          : "inline-block text-[9px] leading-tight text-white/40 hover:text-white/70"
         : "fixed bottom-3 left-3 z-[9999] rounded border border-white/15 bg-black/80 px-2.5 py-1.5 text-[11px] leading-tight text-white/70 backdrop-blur hover:border-white/30 hover:text-white";
 
   return (
