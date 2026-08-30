@@ -7,11 +7,12 @@ import SourceCodeNotice from "../components/SourceCodeNotice";
 import { removeTrailingSegment } from "../constant/Utils";
 
 const INEZ_PROPOSAL_NUMBER = "KOD-2026-3A7533";
-const INEZ_PROPOSAL_VIEWER_CSS = `
+const PROPOSAL_VIEWER_CSS = `
 @media screen {
   .page {
     width: 100% !important;
     max-width: none !important;
+    box-sizing: border-box !important;
   }
 }
 `;
@@ -92,11 +93,9 @@ export default function ProposalViewer() {
     const activeCss = isDarkMode
       ? proposal?.darkCss
       : proposal?.lightCss || proposal?.darkCss;
-    const viewerCss = isInezPresentationHotfix
-      ? `${activeCss || ""}\n${INEZ_PROPOSAL_VIEWER_CSS}`
-      : activeCss;
+    const viewerCss = `${activeCss || ""}\n${PROPOSAL_VIEWER_CSS}`;
     return buildProposalDocument(proposal?.html, viewerCss);
-  }, [proposal, isInezPresentationHotfix, isDarkMode]);
+  }, [proposal, isDarkMode]);
 
   const acceptProposal = async () => {
     setAccepting(true);
