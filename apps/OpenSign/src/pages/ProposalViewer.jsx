@@ -52,7 +52,9 @@ export default function ProposalViewer() {
   const [loading, setLoading] = useState(true);
   const [accepting, setAccepting] = useState(false);
   const [error, setError] = useState("");
+  const [theme, setTheme] = useState("dark");
   const redirectedFromSigning = searchParams.get("signed") === "1";
+  const isDarkMode = theme === "dark";
 
   const apiBase = () => {
     const baseApi = localStorage.getItem("baseUrl") || "";
@@ -87,11 +89,14 @@ export default function ProposalViewer() {
     proposal?.proposalNumber === INEZ_PROPOSAL_NUMBER;
 
   const documentHtml = useMemo(() => {
+    const activeCss = isDarkMode
+      ? proposal?.darkCss
+      : proposal?.lightCss || proposal?.darkCss;
     const viewerCss = isInezPresentationHotfix
-      ? `${proposal?.darkCss || ""}\n${INEZ_PROPOSAL_VIEWER_CSS}`
-      : proposal?.darkCss;
+      ? `${activeCss || ""}\n${INEZ_PROPOSAL_VIEWER_CSS}`
+      : activeCss;
     return buildProposalDocument(proposal?.html, viewerCss);
-  }, [proposal, isInezPresentationHotfix]);
+  }, [proposal, isInezPresentationHotfix, isDarkMode]);
 
   const acceptProposal = async () => {
     setAccepting(true);
@@ -157,6 +162,30 @@ export default function ProposalViewer() {
         ? "Proposal accepted"
         : `Prepared for ${proposal?.recipientName || "you"}`;
 
+  const mutedTextClass = isDarkMode ? "text-white/60" : "text-black/60";
+  const subtleTextClass = isDarkMode ? "text-white/45" : "text-black/45";
+  const faintTextClass = isDarkMode ? "text-white/40" : "text-black/40";
+  const shellBorderClass = isDarkMode ? "border-white/10" : "border-black/10";
+  const infoPanelClass = isDarkMode
+    ? "border-white/15 bg-white/5"
+    : "border-black/10 bg-black/[0.03]";
+
+  const themeToggle = (
+    <button
+      type="button"
+      onClick={() => setTheme((current) => current === "dark" ? "light" : "dark")}
+      aria-label={`Switch to ${isDarkMode ? "light" : "dark"} mode`}
+      title={`Switch to ${isDarkMode ? "light" : "dark"} mode`}
+      className={`inline-flex items-center justify-center rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+        isDarkMode
+          ? "border-white/15 bg-white/5 text-white/75 hover:bg-white/10 hover:text-white"
+          : "border-black/10 bg-black/[0.03] text-black/70 hover:bg-black/[0.07] hover:text-black"
+      }`}
+    >
+      {isDarkMode ? "Light mode" : "Dark mode"}
+    </button>
+  );
+
   const proposalAction = (
     <button
       type="button"
@@ -175,15 +204,24 @@ export default function ProposalViewer() {
   );
 
   return (
-    <div className="min-h-screen bg-[#090909] text-white">
-      <aside className="hidden lg:flex fixed inset-y-0 left-0 w-56 border-r border-white/10 bg-[#090909] z-30 flex-col">
-        <div className="px-6 py-6 border-b border-white/10">
+    <div
+      className={`min-h-screen transition-colors duration-200 ${
+        isDarkMode ? "bg-[#090909] text-white" : "bg-[#f4f4f5] text-[#18181b]"
+      }`}
+    >
+      <aside
+        className={`hidden lg:flex fixed inset-y-0 left-0 w-56 border-r z-30 flex-col transition-colors duration-200 ${
+          isDarkMode ? "border-white/10 bg-[#090909]" : "border-black/10 bg-white"
+        }`}
+      >
+        <div className={`px-6 py-6 border-b ${shellBorderClass}`}>
           <div className="font-semibold tracking-tight text-lg">
             Kodara <span className="text-[#ef2b2d]">▪</span> Sign
           </div>
-          <div className="text-[11px] text-white/40 mt-2 tracking-wide">
+          <div className={`text-[11px] mt-2 tracking-wide ${faintTextClass}`}>
             {proposal?.proposalNumber}
           </div>
+          <div className="mt-4">{themeToggle}</div>
         </div>
 
         <div className="flex-1 px-6 py-6 flex flex-col justify-end">
@@ -193,7 +231,7 @@ export default function ProposalViewer() {
                 <div className="text-sm font-medium leading-snug">
                   {sidebarStatus}
                 </div>
-                <div className="text-[11px] text-white/40 mt-1 break-all">
+                <div className={`text-[11px] mt-1 break-all ${faintTextClass}`}>
                   {proposal?.snapshotHash
                     ? `Snapshot ${proposal.snapshotHash.slice(0, 12)}`
                     : ""}
@@ -207,23 +245,34 @@ export default function ProposalViewer() {
               ) : null}
             </>
           ) : (
-            <div className="text-sm text-white/55 leading-relaxed">
+            <div className={`text-sm leading-relaxed ${mutedTextClass}`}>
               Agreement completed. Your copies are being delivered by email.
             </div>
           )}
           <div className="mt-5">
-            <SourceCodeNotice variant="sidebar" />
+            <SourceCodeNotice variant="sidebar" theme={theme} />
           </div>
         </div>
       </aside>
 
-      <header className="lg:hidden h-16 border-b border-white/10 flex items-center justify-between px-5 md:px-8 sticky top-0 bg-[#090909]/95 backdrop-blur z-20">
-        <div className="font-semibold tracking-tight text-lg">
+      <header
+        className={`lg:hidden min-h-16 border-b flex items-center justify-between gap-3 px-5 md:px-8 py-3 sticky top-0 backdrop-blur z-20 transition-colors duration-200 ${
+          isDarkMode
+            ? "border-white/10 bg-[#090909]/95"
+            : "border-black/10 bg-white/95"
+        }`}
+      >
+        <div className="font-semibold tracking-tight text-lg shrink-0">
           Kodara <span className="text-[#ef2b2d]">▪</span> Sign
         </div>
-        <div className="text-right">
-          <div className="text-xs text-white/45">{proposal?.proposalNumber}</div>
-          <SourceCodeNotice variant="compact" />
+        <div className="flex items-center justify-end gap-3 min-w-0">
+          {themeToggle}
+          <div className="text-right min-w-0">
+            <div className={`text-xs truncate ${subtleTextClass}`}>
+              {proposal?.proposalNumber}
+            </div>
+            <SourceCodeNotice variant="compact" theme={theme} />
+          </div>
         </div>
       </header>
 
@@ -232,52 +281,66 @@ export default function ProposalViewer() {
           {completed ? (
             <div className="mb-4 border border-emerald-500/30 bg-emerald-500/10 rounded-lg px-4 py-3">
               <div className="font-semibold">Agreement completed</div>
-              <div className="text-sm text-white/60 mt-1">
+              <div className={`text-sm mt-1 ${mutedTextClass}`}>
                 Your proposal was accepted and your agreement was completed. Your copies are being delivered by email.
               </div>
             </div>
           ) : signatureSubmitted ? (
             <div className="mb-4 border border-emerald-500/30 bg-emerald-500/10 rounded-lg px-4 py-3">
               <div className="font-semibold">Signature submitted</div>
-              <div className="text-sm text-white/60 mt-1">
+              <div className={`text-sm mt-1 ${mutedTextClass}`}>
                 Your signature was submitted successfully. The completed agreement will be delivered by email when all signatures are finalized.
               </div>
             </div>
           ) : isInezPresentationHotfix ? (
-            <div className="mb-4 border border-white/15 bg-white/5 rounded-lg px-4 py-3">
+            <div className={`mb-4 border rounded-lg px-4 py-3 ${infoPanelClass}`}>
               <div className="font-semibold">Proposal ready for your review</div>
-              <div className="text-sm text-white/60 mt-1">
+              <div className={`text-sm mt-1 ${mutedTextClass}`}>
                 Review the proposal below. When you are ready, accept it to continue to the agreement.
               </div>
             </div>
           ) : accepted ? (
-            <div className="mb-4 border border-white/15 bg-white/5 rounded-lg px-4 py-3">
+            <div className={`mb-4 border rounded-lg px-4 py-3 ${infoPanelClass}`}>
               <div className="font-semibold">Proposal accepted</div>
-              <div className="text-sm text-white/60 mt-1">
+              <div className={`text-sm mt-1 ${mutedTextClass}`}>
                 Continue to the agreement to complete the process.
               </div>
             </div>
           ) : null}
 
-          <div className="rounded-xl overflow-hidden border border-white/10 bg-[#111] shadow-2xl">
+          <div
+            className={`rounded-xl overflow-hidden border transition-colors duration-200 ${
+              isDarkMode
+                ? "border-white/10 bg-[#111] shadow-2xl"
+                : "border-black/10 bg-white shadow-xl"
+            }`}
+          >
             <iframe
               title={proposal?.name || "Proposal"}
               sandbox=""
               srcDoc={documentHtml}
-              className="block w-full min-h-[calc(100vh-150px)] lg:min-h-[calc(100vh-32px)] bg-[#111]"
+              className={`block w-full min-h-[calc(100vh-150px)] lg:min-h-[calc(100vh-32px)] transition-colors duration-200 ${
+                isDarkMode ? "bg-[#111]" : "bg-white"
+              }`}
             />
           </div>
         </div>
       </main>
 
       {!completed && (
-        <div className="lg:hidden fixed bottom-0 inset-x-0 bg-[#090909]/95 backdrop-blur border-t border-white/10 z-30">
+        <div
+          className={`lg:hidden fixed bottom-0 inset-x-0 backdrop-blur border-t z-30 transition-colors duration-200 ${
+            isDarkMode
+              ? "bg-[#090909]/95 border-white/10"
+              : "bg-white/95 border-black/10"
+          }`}
+        >
           <div className="max-w-[1100px] mx-auto px-5 md:px-8 py-4 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
             <div>
               <div className="text-sm font-medium">
                 {sidebarStatus}
               </div>
-              <div className="text-xs text-white/45 mt-0.5">
+              <div className={`text-xs mt-0.5 ${subtleTextClass}`}>
                 {proposal?.snapshotHash
                   ? `Snapshot ${proposal.snapshotHash.slice(0, 12)}`
                   : ""}
