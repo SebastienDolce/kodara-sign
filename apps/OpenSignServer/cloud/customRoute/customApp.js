@@ -13,6 +13,7 @@ import {
   getPublicProposal,
   acceptProposal,
 } from './proposals.js';
+import { notifyProposalFirstView } from './proposalViewNotifications.js';
 import getProposalFile from './proposalFiles.js';
 import { deleteUserByAdmin, deleteUserPost } from './deleteAccount/deleteUser.js';
 import { deleteUserGet } from './deleteAccount/deleteUserGet.js';
@@ -33,7 +34,7 @@ app.get('/htmltemplates', listHtmlTemplates);
 app.get('/htmltemplates/:templateId', getHtmlTemplate);
 app.get('/contracttemplates', listContractTemplates);
 app.post('/proposals', sendProposal);
-app.get('/proposal-public/:token', getPublicProposal);
+app.get('/proposal-public/:token', notifyProposalFirstView, getPublicProposal);
 app.post('/proposal-public/:token/accept', acceptProposal);
 app.get('/proposal-files/:token/:kind', getProposalFile);
 app.get('/delete-account/:userId', deleteUserGet);
