@@ -1,3 +1,5 @@
+/* global describe, it, expect */
+
 import { buildProposalViewNotification } from '../cloud/customRoute/proposalViewNotifications.js';
 
 describe('proposal view notifications', () => {
