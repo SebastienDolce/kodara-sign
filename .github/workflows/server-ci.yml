@@ -61,7 +61,7 @@ jobs:
           printf '%s\n' "$relative_files"
           npx eslint --no-eslintrc --config .eslintrc.json $relative_files
 
-      - name: Run server tests
+      - name: Run proposal notification unit tests
         env:
           SERVER_URL: http://127.0.0.1:8080/api/app
-        run: npm test
+        run: npx jasmine --config=spec/support/proposal-view-notifications.json
