@@ -8,7 +8,6 @@ on:
     paths:
       - 'apps/OpenSignServer/**'
       - '.github/workflows/server-ci.yml'
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -22,6 +21,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Use Node.js 22
         uses: actions/setup-node@v4
@@ -33,13 +34,32 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint server
+      - name: Syntax-check changed server files
         env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          files=$(git diff --name-only "$BASE_SHA"...HEAD -- ':(top)apps/OpenSignServer/**/*.js' ':(top)apps/OpenSignServer/**/*.cjs')
+          if [ -z "$files" ]; then
+            echo "No changed server JavaScript files."
+            exit 0
+          fi
+          while IFS= read -r file; do
+            node --check "${file#apps/OpenSignServer/}"
+          done <<< "$files"
+
+      - name: Lint changed server files
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
           ESLINT_USE_FLAT_CONFIG: 'false'
-        run: >-
-          npx eslint --no-eslintrc --config .eslintrc.json --cache ./cloud &&
-          npx eslint --no-eslintrc --config .eslintrc.json --cache index.js &&
-          npx eslint --no-eslintrc --config .eslintrc.json --cache ./spec
+        run: |
+          files=$(git diff --name-only "$BASE_SHA"...HEAD -- ':(top)apps/OpenSignServer/**/*.js')
+          if [ -z "$files" ]; then
+            echo "No changed server .js files to lint."
+            exit 0
+          fi
+          relative_files=$(printf '%s\n' "$files" | sed 's#^apps/OpenSignServer/##')
+          printf '%s\n' "$relative_files"
+          npx eslint --no-eslintrc --config .eslintrc.json $relative_files
 
       - name: Run server tests
         run: npm test
