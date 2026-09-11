@@ -34,6 +34,8 @@ jobs:
         run: npm ci
 
       - name: Lint server
+        env:
+          ESLINT_USE_FLAT_CONFIG: 'false'
         run: npm run lint
 
       - name: Run server tests
