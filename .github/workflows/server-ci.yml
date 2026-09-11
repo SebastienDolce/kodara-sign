@@ -36,7 +36,10 @@ jobs:
       - name: Lint server
         env:
           ESLINT_USE_FLAT_CONFIG: 'false'
-        run: npm run lint
+        run: >-
+          npx eslint --no-eslintrc --config .eslintrc.json --cache ./cloud &&
+          npx eslint --no-eslintrc --config .eslintrc.json --cache index.js &&
+          npx eslint --no-eslintrc --config .eslintrc.json --cache ./spec
 
       - name: Run server tests
         run: npm test
