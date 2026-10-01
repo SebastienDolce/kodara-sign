@@ -17,12 +17,22 @@ Kodara modifications include, among other changes:
 - Kodara Sign branding and transactional email presentation.
 - HTML-backed proposal templates with arbitrary HTML, dark CSS, and light CSS.
 - Chromium-based dark and print-friendly PDF rendering.
-- Proposal snapshotting, integrity hashing, acceptance tracking, proposal-to-contract handoff, and first-open sender notifications.
+- Proposal snapshotting, integrity hashing, acceptance tracking, proposal-to-contract handoff, first-open sender notifications, and either-recipient signing.
 - Delivery of accepted proposal, print-friendly proposal, signed agreement, and signing certificate.
 - Kodara-branded completion certificates and proxy-aware audit IP handling.
 - Public source-code / AGPL notice in the network user interface.
 
 The Git history is the authoritative detailed record of individual modifications and dates.
+
+## Either-recipient proposal signing
+
+A proposal may be addressed to one or two authorized recipients. With two recipients, Kodara Sign emails each person a distinct recipient-authorized proposal URL. The public proposal content is shared, but the recipient token identifies which authorized contact is attempting to accept.
+
+Either-recipient mode is intentionally limited to agreement templates with exactly one signer role. The first authorized recipient to accept is recorded in `AcceptedRecipientName`, `AcceptedRecipientEmail`, and `AcceptedContactBookId`, becomes the agreement signer, and owns the resulting signing session. The other recipient can continue viewing the proposal but is prevented from creating or entering a second signer session. Existing single-recipient proposal links remain compatible and do not require the new recipient token.
+
+Recipient tokens are stored only as SHA-256 hashes in the proposal record. The raw recipient token exists only in the recipient's secure proposal URL. A process-level acceptance guard prevents two requests handled by the same server process from creating duplicate contracts at the same time; deployments with multiple concurrent OpenSign server instances should add a database-backed compare-and-set/lock before relying on this as a cross-instance concurrency guarantee.
+
+The database fields are added by the server migration system on startup. The frontend must also be rebuilt so the send-proposal dialog can collect the optional second recipient and preserve the recipient token through signing redirects.
 
 ## Proposal first-open notifications
 

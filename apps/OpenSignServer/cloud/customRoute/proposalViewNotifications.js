@@ -2,6 +2,10 @@ import axios from 'axios';
 import { createHash } from 'crypto';
 import { appName, cloudServerUrl, serverAppId } from '../../Utils.js';
 import sendSystemMail from '../parsefunction/sendSystemMail.js';
+import {
+  proposalRecipientLabel,
+  resolveProposalRecipient,
+} from './proposalRecipients.js';
 
 const notificationInFlight = new Set();
 
@@ -37,7 +41,7 @@ function resolveSender(proposal) {
 export function buildProposalViewNotification(proposal, viewedAt) {
   const proposalName = proposal?.Name || proposal?.ProposalNumber || 'Proposal';
   const proposalNumber = proposal?.ProposalNumber || 'No proposal number';
-  const recipientName = proposal?.RecipientName || proposal?.RecipientEmail || 'the recipient';
+  const recipientName = proposalRecipientLabel(proposal);
   const viewedIso = viewedAt instanceof Date ? viewedAt.toISOString() : String(viewedAt || '');
   const safeProposalName = escapeHtml(proposalName);
   const safeProposalNumber = escapeHtml(proposalNumber);
@@ -69,9 +73,15 @@ async function updateProposal(proposalId, changes) {
   });
 }
 
-export async function recordProposalFirstView(token, viewedAt = new Date()) {
+export async function recordProposalFirstView(token, viewedAt = new Date(), recipientToken = '') {
   const proposal = await findProposalByToken(token);
   if (!proposal?.objectId) return { status: 'not-found' };
+  try {
+    resolveProposalRecipient(proposal, recipientToken);
+  } catch (error) {
+    if (error?.status === 403) return { status: 'unauthorized' };
+    throw error;
+  }
   if (proposal.ViewNotificationSentAt) return { status: 'already-notified' };
   if (notificationInFlight.has(proposal.objectId)) return { status: 'in-flight' };
 
@@ -124,7 +134,7 @@ export async function recordProposalFirstView(token, viewedAt = new Date()) {
 
 export function notifyProposalFirstView(req, res, next) {
   void res;
-  recordProposalFirstView(req.params?.token).catch(error => {
+  recordProposalFirstView(req.params?.token, new Date(), req.query?.recipient).catch(error => {
     console.error(`[PROPOSAL] Unable to record first proposal view: ${error?.message || error}`);
   });
   return next();

@@ -16,8 +16,10 @@ const EMPTY_TEMPLATE = {
 };
 
 const EMPTY_SEND_FORM = {
-  recipientName: "",
-  recipientEmail: "",
+  recipients: [
+    { name: "", email: "" },
+    { name: "", email: "" }
+  ],
   contractTemplateId: ""
 };
 
@@ -263,16 +265,67 @@ export default function HtmlTemplateEditor() {
     }
   });
 
+  const updateSendRecipient = (index, field, value) => {
+    setSendForm((current) => ({
+      ...current,
+      recipients: current.recipients.map((recipient, recipientIndex) =>
+        recipientIndex === index ? { ...recipient, [field]: value } : recipient
+      )
+    }));
+  };
+
   const sendProposal = withSessionValidation(async (event) => {
     event.preventDefault();
+    const normalizedRecipients = sendForm.recipients.map((recipient) => ({
+      name: recipient.name.trim(),
+      email: recipient.email.trim()
+    }));
+    const primaryRecipient = normalizedRecipients[0];
+    const secondaryRecipient = normalizedRecipients[1];
+    const secondaryStarted = Boolean(
+      secondaryRecipient.name || secondaryRecipient.email
+    );
+
     if (
-      !sendForm.recipientName.trim() ||
-      !sendForm.recipientEmail.trim() ||
+      !primaryRecipient.name ||
+      !primaryRecipient.email ||
       !sendForm.contractTemplateId
     ) {
-      setSendError("Recipient name, email, and contract template are required.");
+      setSendError("Recipient 1 name, email, and contract template are required.");
       return;
     }
+    if (
+      secondaryStarted &&
+      (!secondaryRecipient.name || !secondaryRecipient.email)
+    ) {
+      setSendError("Recipient 2 needs both a name and email address.");
+      return;
+    }
+
+    const recipients = secondaryStarted
+      ? [primaryRecipient, secondaryRecipient]
+      : [primaryRecipient];
+    const uniqueEmails = new Set(
+      recipients.map((recipient) => recipient.email.toLowerCase())
+    );
+    if (uniqueEmails.size !== recipients.length) {
+      setSendError("Recipients must use different email addresses.");
+      return;
+    }
+
+    const selectedTemplate = contractTemplates.find(
+      (template) => template.objectId === sendForm.contractTemplateId
+    );
+    if (
+      recipients.length > 1 &&
+      Number(selectedTemplate?.signerRoleCount || 0) !== 1
+    ) {
+      setSendError(
+        "Two-recipient proposals require an agreement template with exactly one signer role."
+      );
+      return;
+    }
+
     setSendingProposal(true);
     setSendError("");
     setSendResult(null);
@@ -282,8 +335,7 @@ export default function HtmlTemplateEditor() {
         {
           htmlTemplateId: templateId,
           contractTemplateId: sendForm.contractTemplateId,
-          recipientName: sendForm.recipientName,
-          recipientEmail: sendForm.recipientEmail
+          recipients
         },
         {
           headers: {
@@ -301,6 +353,11 @@ export default function HtmlTemplateEditor() {
       setSendingProposal(false);
     }
   });
+
+  const secondRecipientStarted = Boolean(
+    sendForm.recipients?.[1]?.name?.trim() ||
+      sendForm.recipients?.[1]?.email?.trim()
+  );
 
   if (loading) {
     return (
@@ -488,28 +545,68 @@ export default function HtmlTemplateEditor() {
                 <div className="font-semibold text-lg mb-2">Proposal created</div>
                 <p className="text-sm opacity-70 mb-4">
                   {sendResult.emailSent
-                    ? "The proposal email was sent."
-                    : "The proposal was created, but email delivery was not confirmed. You can send the secure link manually."}
+                    ? (sendResult.recipientLinks?.length || 0) > 1
+                      ? "The proposal emails were sent to both authorized recipients. Either person can accept; the first to accept becomes the agreement signer."
+                      : "The proposal email was sent."
+                    : "The proposal was created, but email delivery was not confirmed for every recipient. You can send the secure recipient link manually."}
                 </p>
-                <div className="rounded border border-base-content/15 bg-base-200 p-3 mb-4">
-                  <div className="text-xs opacity-60 mb-1">{sendResult.proposalNumber}</div>
-                  <div className="text-sm break-all">{sendResult.shareUrl}</div>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    className="op-btn op-btn-primary"
-                    onClick={() => window.open(sendResult.shareUrl, "_blank", "noopener,noreferrer")}
-                  >
-                    Open proposal
-                  </button>
-                  <button
-                    type="button"
-                    className="op-btn"
-                    onClick={() => navigator.clipboard?.writeText(sendResult.shareUrl)}
-                  >
-                    Copy link
-                  </button>
+                <div className="text-xs opacity-60 mb-2">{sendResult.proposalNumber}</div>
+                <div className="space-y-3">
+                  {(sendResult.recipientLinks?.length
+                    ? sendResult.recipientLinks
+                    : [{ name: "Recipient", email: "", shareUrl: sendResult.shareUrl }]
+                  ).map((recipient) => {
+                    const delivery = sendResult.emailResults?.find(
+                      (result) => result.email === recipient.email
+                    );
+                    return (
+                      <div
+                        key={recipient.email || recipient.shareUrl}
+                        className="rounded border border-base-content/15 bg-base-200 p-3"
+                      >
+                        <div className="text-sm font-medium">
+                          {recipient.name || recipient.email || "Recipient"}
+                        </div>
+                        {recipient.email ? (
+                          <div className="text-xs opacity-60 mt-0.5">
+                            {recipient.email}
+                            {delivery
+                              ? delivery.sent
+                                ? " · Email sent"
+                                : " · Email delivery not confirmed"
+                              : ""}
+                          </div>
+                        ) : null}
+                        <div className="text-xs break-all mt-2 opacity-80">
+                          {recipient.shareUrl}
+                        </div>
+                        <div className="flex flex-wrap gap-2 mt-3">
+                          <button
+                            type="button"
+                            className="op-btn op-btn-sm op-btn-primary"
+                            onClick={() =>
+                              window.open(
+                                recipient.shareUrl,
+                                "_blank",
+                                "noopener,noreferrer"
+                              )
+                            }
+                          >
+                            Open
+                          </button>
+                          <button
+                            type="button"
+                            className="op-btn op-btn-sm"
+                            onClick={() =>
+                              navigator.clipboard?.writeText(recipient.shareUrl)
+                            }
+                          >
+                            Copy link
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             ) : (
@@ -517,35 +614,51 @@ export default function HtmlTemplateEditor() {
                 <p className="text-sm opacity-70 mb-4">
                   Sending freezes the current saved HTML and both stylesheets, generates the dark and print PDFs, and creates an immutable proposal snapshot.
                 </p>
-                <label className="block mb-3">
-                  <span className="block text-sm font-medium mb-1">Client name</span>
-                  <input
-                    className="op-input op-input-bordered w-full"
-                    value={sendForm.recipientName}
-                    onChange={(event) =>
-                      setSendForm((current) => ({
-                        ...current,
-                        recipientName: event.target.value
-                      }))
-                    }
-                    required
-                  />
-                </label>
-                <label className="block mb-3">
-                  <span className="block text-sm font-medium mb-1">Client email</span>
-                  <input
-                    type="email"
-                    className="op-input op-input-bordered w-full"
-                    value={sendForm.recipientEmail}
-                    onChange={(event) =>
-                      setSendForm((current) => ({
-                        ...current,
-                        recipientEmail: event.target.value
-                      }))
-                    }
-                    required
-                  />
-                </label>
+                <div className="space-y-3 mb-4">
+                  {sendForm.recipients.map((recipient, index) => (
+                    <div
+                      key={index}
+                      className="rounded border border-base-content/15 p-3"
+                    >
+                      <div className="text-sm font-medium mb-2">
+                        Recipient {index + 1}
+                        {index === 1 ? (
+                          <span className="font-normal opacity-60"> (optional)</span>
+                        ) : null}
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <label className="block">
+                          <span className="block text-xs opacity-70 mb-1">Name</span>
+                          <input
+                            className="op-input op-input-bordered w-full"
+                            value={recipient.name}
+                            onChange={(event) =>
+                              updateSendRecipient(index, "name", event.target.value)
+                            }
+                            required={index === 0}
+                          />
+                        </label>
+                        <label className="block">
+                          <span className="block text-xs opacity-70 mb-1">Email</span>
+                          <input
+                            type="email"
+                            className="op-input op-input-bordered w-full"
+                            value={recipient.email}
+                            onChange={(event) =>
+                              updateSendRecipient(index, "email", event.target.value)
+                            }
+                            required={index === 0}
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs opacity-60 mb-4">
+                  Add Recipient 2 when either person may sign. Each recipient gets a
+                  different secure proposal link; the first person to accept becomes
+                  the agreement signer.
+                </p>
                 <label className="block mb-4">
                   <span className="block text-sm font-medium mb-1">Agreement template</span>
                   <select
@@ -561,17 +674,31 @@ export default function HtmlTemplateEditor() {
                     disabled={loadingContracts}
                   >
                     <option value="">
-                      {loadingContracts ? "Loading..." : "Choose a one-signer OpenSign template"}
+                      {loadingContracts ? "Loading..." : "Choose an OpenSign template"}
                     </option>
                     {contractTemplates.map((template) => (
-                      <option key={template.objectId} value={template.objectId}>
+                      <option
+                        key={template.objectId}
+                        value={template.objectId}
+                        disabled={
+                          secondRecipientStarted &&
+                          Number(template.signerRoleCount || 0) !== 1
+                        }
+                      >
                         {template.Name}
+                        {template.signerRoleCount
+                          ? ` — ${template.signerRoleCount} signer${template.signerRoleCount === 1 ? "" : "s"}`
+                          : ""}
                       </option>
                     ))}
                   </select>
                   {!loadingContracts && contractTemplates.length === 0 ? (
                     <span className="block text-xs opacity-60 mt-1">
-                      No eligible one-signer PDF contract templates were found.
+                      No eligible PDF contract templates were found.
+                    </span>
+                  ) : secondRecipientStarted ? (
+                    <span className="block text-xs opacity-60 mt-1">
+                      With two recipients, use a one-signer agreement template.
                     </span>
                   ) : null}
                 </label>
