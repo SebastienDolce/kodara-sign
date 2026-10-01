@@ -7,6 +7,13 @@ import { tmpdir } from 'os';
 import path from 'path';
 import { PDFDocument } from 'pdf-lib';
 import { cloudServerUrl, getSecureUrl, serverAppId } from '../../Utils.js';
+import {
+  hashRecipientToken,
+  normalizeEmail,
+  requestedProposalRecipients,
+  resolveProposalRecipient,
+  storedProposalRecipients,
+} from './proposalRecipients.js';
 
 const execFileAsync = promisify(execFile);
 const chromiumPath = process.env.CHROMIUM_PATH || '/usr/bin/chromium';
@@ -16,8 +23,8 @@ let activeRenders = 0;
 const renderQueue = [];
 
 const sha256 = value => createHash('sha256').update(value).digest('hex');
-const normalizeEmail = value => String(value || '').trim().toLowerCase().replace(/\s/g, '');
 const ptr = (className, objectId) => ({ __type: 'Pointer', className, objectId });
+const proposalAcceptanceInFlight = new Set();
 const escapeHtml = value =>
   String(value || '')
     .replace(/&/g, '&amp;')
@@ -196,11 +203,14 @@ async function ensureContact(sender, name, email) {
   throw new Error('Unable to create or resolve proposal recipient contact.');
 }
 
-function oneSignerRole(template) {
-  const roles = (template?.Placeholders || []).filter(
+function signerRoles(template) {
+  return (template?.Placeholders || []).filter(
     item => String(item?.Role || '').toLowerCase() !== 'prefill'
   );
-  return roles.length > 0;
+}
+
+function hasSignerRole(template) {
+  return signerRoles(template).length > 0;
 }
 
 export async function listContractTemplates(req, res) {
@@ -216,8 +226,12 @@ export async function listContractTemplates(req, res) {
       { headers: sender.headers.master }
     );
     const templates = (result?.data?.results || [])
-      .filter(item => item.URL && oneSignerRole(item))
-      .map(item => ({ objectId: item.objectId, Name: item.Name || 'Untitled contract' }));
+      .filter(item => item.URL && hasSignerRole(item))
+      .map(item => ({
+        objectId: item.objectId,
+        Name: item.Name || 'Untitled contract',
+        signerRoleCount: signerRoles(item).length,
+      }));
     return res.status(200).json({ templates });
   } catch (error) {
     return routeError(res, error, 'Unable to list contract templates.');
@@ -227,10 +241,10 @@ export async function listContractTemplates(req, res) {
 export async function sendProposal(req, res) {
   try {
     const sender = await resolveSender(req);
-    const { htmlTemplateId, contractTemplateId, recipientName } = req.body || {};
-    const recipientEmail = normalizeEmail(req.body?.recipientEmail);
-    if (!htmlTemplateId || !contractTemplateId || !recipientName?.trim() || !recipientEmail) {
-      return res.status(400).json({ error: 'Recipient name, email, proposal template, and contract template are required.' });
+    const { htmlTemplateId, contractTemplateId } = req.body || {};
+    const recipients = requestedProposalRecipients(req.body || {});
+    if (!htmlTemplateId || !contractTemplateId) {
+      return res.status(400).json({ error: 'Proposal template and contract template are required.' });
     }
 
     const htmlTemplate = await getOwnedTemplate(htmlTemplateId, sender);
@@ -238,8 +252,14 @@ export async function sendProposal(req, res) {
       return res.status(400).json({ error: 'Proposal source must be an HTML template.' });
     }
     const contractTemplate = await getOwnedTemplate(contractTemplateId, sender);
-    if (contractTemplate.TemplateType === 'html' || !contractTemplate.URL || !oneSignerRole(contractTemplate)) {
+    const contractSignerRoles = signerRoles(contractTemplate);
+    if (contractTemplate.TemplateType === 'html' || !contractTemplate.URL || !contractSignerRoles.length) {
       return res.status(400).json({ error: 'Contract template must be a normal OpenSign template with at least one signer role.' });
+    }
+    if (recipients.length > 1 && contractSignerRoles.length !== 1) {
+      return res.status(400).json({
+        error: 'Either-recipient proposals require an OpenSign agreement template with exactly one signer role.',
+      });
     }
 
     const html = String(htmlTemplate.HtmlContent || '');
@@ -272,14 +292,27 @@ export async function sendProposal(req, res) {
       })
     );
     const publicToken = randomBytes(32).toString('base64url');
-    const contact = await ensureContact(sender, recipientName.trim(), recipientEmail);
+    const resolvedRecipients = await Promise.all(
+      recipients.map(async recipient => {
+        const contact = await ensureContact(sender, recipient.name, recipient.email);
+        const recipientToken =
+          recipients.length > 1 ? randomBytes(32).toString('base64url') : '';
+        return {
+          ...recipient,
+          contactBookId: contact.objectId,
+          recipientToken,
+          tokenHash: recipientToken ? hashRecipientToken(recipientToken) : '',
+        };
+      })
+    );
+    const primaryRecipient = resolvedRecipients[0];
     const now = new Date().toISOString();
     const payload = {
       ProposalNumber: proposalNumber,
       Name: htmlTemplate.Name || proposalNumber,
       Status: 'sent',
-      RecipientName: recipientName.trim(),
-      RecipientEmail: recipientEmail,
+      RecipientName: primaryRecipient.name,
+      RecipientEmail: primaryRecipient.email,
       HtmlContent: html,
       DarkCss: darkCss,
       LightCss: lightCss,
@@ -289,7 +322,13 @@ export async function sendProposal(req, res) {
       PublicTokenHash: sha256(publicToken),
       HtmlTemplateId: htmlTemplateId,
       ContractTemplateId: contractTemplateId,
-      ContactBookId: contact.objectId,
+      ContactBookId: primaryRecipient.contactBookId,
+      AuthorizedRecipients: resolvedRecipients.map(recipient => ({
+        name: recipient.name,
+        email: recipient.email,
+        contactBookId: recipient.contactBookId,
+        tokenHash: recipient.tokenHash,
+      })),
       SentAt: { __type: 'Date', iso: now },
       CreatedBy: ptr('_User', sender.user.objectId),
       ExtUserPtr: ptr('contracts_Users', sender.extUser.objectId),
@@ -301,29 +340,51 @@ export async function sendProposal(req, res) {
     if (!proposalId) throw new Error('Proposal save did not return an objectId.');
 
     const publicBase = req.headers['public_url'] || `https://${req.get('host')}`;
-    const shareUrl = `${publicBase}/proposal/${publicToken}`;
+    const baseShareUrl = `${publicBase}/proposal/${publicToken}`;
+    const recipientLinks = resolvedRecipients.map(recipient => ({
+      name: recipient.name,
+      email: recipient.email,
+      shareUrl: recipient.recipientToken
+        ? `${baseShareUrl}?recipient=${encodeURIComponent(recipient.recipientToken)}`
+        : baseShareUrl,
+    }));
     const senderName = sender.user?.name || sender.extUser?.Company || 'Kodara';
-    let emailSent = false;
-    try {
-      const mail = await axios.post(
-        `${cloudServerUrl}/functions/sendmailv3`,
-        {
-          recipient: recipientEmail,
-          subject: `${senderName} sent you ${htmlTemplate.Name || 'a proposal'}`,
-          text: `Review your proposal: ${shareUrl}`,
-          html: `<div style="background:#111;color:#f5f5f5;padding:32px;font-family:Arial,sans-serif"><h2 style="margin:0 0 16px">Your proposal is ready</h2><p>${senderName} has sent you <strong>${htmlTemplate.Name || proposalNumber}</strong>.</p><p><a href="${shareUrl}" style="display:inline-block;background:#ef2b2d;color:white;text-decoration:none;padding:12px 18px;font-weight:700">Review proposal</a></p><p style="color:#aaa;font-size:12px;margin-top:28px">${proposalNumber}</p></div>`,
-          from: senderName,
-          replyto: sender.user?.email || '',
-          extUserId: sender.extUser.objectId,
-        },
-        { headers: { 'Content-Type': 'application/json', ...sender.headers.session } }
-      );
-      emailSent = mail?.data?.result?.status === 'success';
-    } catch (error) {
-      console.error(`[PROPOSAL] Email failed for ${proposalNumber}: ${error?.message}`);
-    }
+    const emailResults = await Promise.all(
+      recipientLinks.map(async recipient => {
+        try {
+          const mail = await axios.post(
+            `${cloudServerUrl}/functions/sendmailv3`,
+            {
+              recipient: recipient.email,
+              subject: `${senderName} sent you ${htmlTemplate.Name || 'a proposal'}`,
+              text: `Review your proposal: ${recipient.shareUrl}`,
+              html: `<div style="background:#111;color:#f5f5f5;padding:32px;font-family:Arial,sans-serif"><h2 style="margin:0 0 16px">Your proposal is ready</h2><p>${senderName} has sent you <strong>${htmlTemplate.Name || proposalNumber}</strong>.</p><p><a href="${recipient.shareUrl}" style="display:inline-block;background:#ef2b2d;color:white;text-decoration:none;padding:12px 18px;font-weight:700">Review proposal</a></p><p style="color:#aaa;font-size:12px;margin-top:28px">${proposalNumber}</p></div>`,
+              from: senderName,
+              replyto: sender.user?.email || '',
+              extUserId: sender.extUser.objectId,
+            },
+            { headers: { 'Content-Type': 'application/json', ...sender.headers.session } }
+          );
+          return { email: recipient.email, sent: mail?.data?.result?.status === 'success' };
+        } catch (error) {
+          console.error(
+            `[PROPOSAL] Email failed for ${proposalNumber} to ${recipient.email}: ${error?.message}`
+          );
+          return { email: recipient.email, sent: false };
+        }
+      })
+    );
+    const emailSent = emailResults.every(result => result.sent);
 
-    return res.status(201).json({ proposalId, proposalNumber, shareUrl, emailSent, snapshotHash });
+    return res.status(201).json({
+      proposalId,
+      proposalNumber,
+      shareUrl: recipientLinks[0]?.shareUrl || baseShareUrl,
+      recipientLinks,
+      emailSent,
+      emailResults,
+      snapshotHash,
+    });
   } catch (error) {
     return routeError(res, error, 'Unable to send proposal.');
   }
@@ -344,12 +405,16 @@ export async function getPublicProposal(req, res) {
   try {
     const proposal = await findProposalByToken(req.params?.token);
     if (!proposal?.objectId) return res.status(404).json({ error: 'Proposal not found.' });
+    const recipient = resolveProposalRecipient(proposal, req.query?.recipient);
+    const acceptedRecipientEmail = normalizeEmail(proposal.AcceptedRecipientEmail);
+    const acceptedByOther =
+      Boolean(acceptedRecipientEmail) && acceptedRecipientEmail !== recipient.email;
     return res.status(200).json({
       proposal: {
         proposalNumber: proposal.ProposalNumber,
         name: proposal.Name,
         status: proposal.Status,
-        recipientName: proposal.RecipientName,
+        recipientName: recipient.name || recipient.email,
         html: proposal.HtmlContent,
         darkCss: proposal.DarkCss,
         lightCss: proposal.LightCss,
@@ -357,6 +422,8 @@ export async function getPublicProposal(req, res) {
         sentAt: proposal.SentAt,
         acceptedAt: proposal.AcceptedAt,
         hasContract: Boolean(proposal.ContractTemplateId),
+        authorizedRecipientCount: storedProposalRecipients(proposal).length,
+        acceptedByOther,
       },
     });
   } catch (error) {
@@ -364,18 +431,20 @@ export async function getPublicProposal(req, res) {
   }
 }
 
-async function createContractForProposal(proposal, token, req) {
+async function createContractForProposal(proposal, token, req, recipient, recipientToken = '') {
   const headers = authHeaders('').master;
   const templateRes = await axios.get(
     `${cloudServerUrl}/classes/contracts_Template/${encodeURIComponent(proposal.ContractTemplateId)}`,
     { headers }
   );
   const template = templateRes?.data;
-  if (!template?.URL || !oneSignerRole(template)) {
+  if (!template?.URL || !hasSignerRole(template)) {
     throw new Error('Contract template is no longer available or has no signer roles.');
   }
+  const recipientEmail = normalizeEmail(recipient?.email || proposal.RecipientEmail);
+  const contactBookId = recipient?.contactBookId || proposal.ContactBookId;
   const contactRes = await axios.get(
-    `${cloudServerUrl}/classes/contracts_Contactbook/${encodeURIComponent(proposal.ContactBookId)}?include=UserId`,
+    `${cloudServerUrl}/classes/contracts_Contactbook/${encodeURIComponent(contactBookId)}?include=UserId`,
     { headers }
   );
   const contact = contactRes?.data;
@@ -402,7 +471,7 @@ async function createContractForProposal(proposal, token, req) {
       { headers }
     );
     for (const assignedContact of assignedContactsRes?.data?.results || []) {
-      if (normalizeEmail(assignedContact?.Email) === normalizeEmail(proposal.RecipientEmail)) {
+      if (normalizeEmail(assignedContact?.Email) === recipientEmail) {
         recipientSignerIds.add(assignedContact.objectId);
       }
     }
@@ -458,7 +527,7 @@ async function createContractForProposal(proposal, token, req) {
     NotifyOnSignatures: template.NotifyOnSignatures || false,
     TimeToCompleteDays: Number(template.TimeToCompleteDays || 15),
     RemindOnceInEvery: Number(template.RemindOnceInEvery || 5),
-    RedirectUrl: `${publicBase}/proposal/${token}?signed=1`,
+    RedirectUrl: `${publicBase}/proposal/${token}?signed=1${recipientToken ? `&recipient=${encodeURIComponent(recipientToken)}` : ''}`,
     Signers: signers,
     Placeholders: placeholders,
     SignatureType: template.SignatureType || [],
@@ -471,20 +540,43 @@ async function createContractForProposal(proposal, token, req) {
   });
   const documentId = created?.data?.objectId;
   if (!documentId) throw new Error('Contract document creation failed.');
-  const loginPayload = `${documentId}/${proposal.RecipientEmail}/${contact.objectId}/false`;
+  const loginPayload = `${documentId}/${recipientEmail}/${contact.objectId}/false`;
   const encoded = Buffer.from(loginPayload, 'utf8').toString('base64url');
   return { documentId, contactId: contact.objectId, signingUrl: `${publicBase}/login/${encoded}` };
 }
 
 export async function acceptProposal(req, res) {
   const token = req.params?.token;
+  let lockedProposalId = '';
   try {
     const proposal = await findProposalByToken(token);
     if (!proposal?.objectId) return res.status(404).json({ error: 'Proposal not found.' });
+
+    const recipientToken = String(req.body?.recipientToken || req.query?.recipient || '');
+    const recipient = resolveProposalRecipient(proposal, recipientToken);
+    const acceptedRecipientEmail = normalizeEmail(proposal.AcceptedRecipientEmail);
+    if (acceptedRecipientEmail && acceptedRecipientEmail !== recipient.email) {
+      return res.status(409).json({
+        error: 'Another authorized recipient has already accepted this proposal.',
+      });
+    }
+
+    if (proposalAcceptanceInFlight.has(proposal.objectId)) {
+      return res.status(409).json({
+        error: 'This proposal is already being accepted. Please try again in a moment.',
+      });
+    }
+    proposalAcceptanceInFlight.add(proposal.objectId);
+    lockedProposalId = proposal.objectId;
+
     const master = authHeaders('').master;
+    const winningEmail = acceptedRecipientEmail || recipient.email;
+    const winningName = proposal.AcceptedRecipientName || recipient.name;
+    const winningContactBookId = proposal.AcceptedContactBookId || recipient.contactBookId;
+
     if (proposal.ContractDocumentId && proposal.ContractDocumentId !== 'creating') {
       const publicBase = req.headers['public_url'] || `https://${req.get('host')}`;
-      const loginPayload = `${proposal.ContractDocumentId}/${proposal.RecipientEmail}/${proposal.ContactBookId}/false`;
+      const loginPayload = `${proposal.ContractDocumentId}/${winningEmail}/${winningContactBookId}/false`;
       return res.status(200).json({
         status: 'accepted',
         signingUrl: `${publicBase}/login/${Buffer.from(loginPayload, 'utf8').toString('base64url')}`,
@@ -501,6 +593,12 @@ export async function acceptProposal(req, res) {
         Status: 'accepted',
         AcceptedAt: acceptedAt,
         AcceptedIp: req.headers['x-real-ip'] || '',
+        AcceptedRecipientName: winningName,
+        AcceptedRecipientEmail: winningEmail,
+        AcceptedContactBookId: winningContactBookId,
+        RecipientName: winningName,
+        RecipientEmail: winningEmail,
+        ContactBookId: winningContactBookId,
         ContractDocumentId: proposal.ContractTemplateId ? 'creating' : '',
       },
       { headers: { ...master, 'Content-Type': 'application/json' } }
@@ -511,7 +609,17 @@ export async function acceptProposal(req, res) {
     }
 
     try {
-      const contract = await createContractForProposal(proposal, token, req);
+      const contract = await createContractForProposal(
+        proposal,
+        token,
+        req,
+        {
+          name: winningName,
+          email: winningEmail,
+          contactBookId: winningContactBookId,
+        },
+        recipientToken
+      );
       await axios.put(
         `${cloudServerUrl}/classes/contracts_Proposal/${proposal.objectId}`,
         { ContractDocumentId: contract.documentId },
@@ -528,6 +636,8 @@ export async function acceptProposal(req, res) {
     }
   } catch (error) {
     return routeError(res, error, 'Unable to accept proposal.');
+  } finally {
+    if (lockedProposalId) proposalAcceptanceInFlight.delete(lockedProposalId);
   }
 }
 
