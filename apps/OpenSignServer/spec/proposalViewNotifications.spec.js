@@ -19,6 +19,33 @@ describe('proposal view notifications', () => {
     expect(notification.text).toContain('not an acceptance or signature');
   });
 
+  it('describes a multi-recipient proposal without claiming which person opened it', () => {
+    const notification = buildProposalViewNotification(
+      {
+        Name: 'Shared proposal',
+        ProposalNumber: 'KOD-2026-DEF456',
+        AuthorizedRecipients: [
+          {
+            name: 'Jane Client',
+            email: 'jane@example.com',
+            contactBookId: 'contact-1',
+            tokenHash: 'a'.repeat(64),
+          },
+          {
+            name: 'John Client',
+            email: 'john@example.com',
+            contactBookId: 'contact-2',
+            tokenHash: 'b'.repeat(64),
+          },
+        ],
+      },
+      '2026-10-01T16:45:00.000Z'
+    );
+
+    expect(notification.text).toContain('Jane Client or John Client');
+    expect(notification.text).toContain('does not prove who opened the link');
+  });
+
   it('escapes proposal values before rendering notification HTML', () => {
     const notification = buildProposalViewNotification(
       {
