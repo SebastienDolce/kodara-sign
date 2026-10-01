@@ -55,6 +55,7 @@ export default function ProposalViewer() {
   const [error, setError] = useState("");
   const [theme, setTheme] = useState("dark");
   const redirectedFromSigning = searchParams.get("signed") === "1";
+  const recipientToken = searchParams.get("recipient") || "";
   const isDarkMode = theme === "dark";
 
   const apiBase = () => {
@@ -68,7 +69,10 @@ export default function ProposalViewer() {
       try {
         setLoading(true);
         const response = await axios.get(
-          `${apiBase()}/proposal-public/${encodeURIComponent(token)}`
+          `${apiBase()}/proposal-public/${encodeURIComponent(token)}`,
+          {
+            params: recipientToken ? { recipient: recipientToken } : {}
+          }
         );
         if (mounted) setProposal(response?.data?.proposal || null);
       } catch (err) {
@@ -84,7 +88,7 @@ export default function ProposalViewer() {
     return () => {
       mounted = false;
     };
-  }, [token]);
+  }, [token, recipientToken]);
 
   const isInezPresentationHotfix =
     proposal?.proposalNumber === INEZ_PROPOSAL_NUMBER;
@@ -103,7 +107,7 @@ export default function ProposalViewer() {
     try {
       const response = await axios.post(
         `${apiBase()}/proposal-public/${encodeURIComponent(token)}/accept`,
-        {}
+        { recipientToken: recipientToken || undefined }
       );
       const signingUrl = response?.data?.signingUrl;
       if (signingUrl) {
@@ -148,18 +152,21 @@ export default function ProposalViewer() {
     serverCompleted || (!isInezPresentationHotfix && redirectedFromSigning);
   const signatureSubmitted =
     isInezPresentationHotfix && redirectedFromSigning && !serverCompleted;
+  const acceptedByOther = Boolean(proposal?.acceptedByOther);
   const accepted = isInezPresentationHotfix
     ? false
-    : proposal?.status === "accepted" || completed;
-  const showAction = !completed && !signatureSubmitted;
+    : !acceptedByOther && (proposal?.status === "accepted" || completed);
+  const showAction = !completed && !signatureSubmitted && !acceptedByOther;
 
   const sidebarStatus = signatureSubmitted
     ? "Signature submitted"
-    : isInezPresentationHotfix
-      ? `Prepared for ${proposal?.recipientName || "you"}`
-      : accepted
-        ? "Proposal accepted"
-        : `Prepared for ${proposal?.recipientName || "you"}`;
+    : acceptedByOther
+      ? "Another recipient accepted"
+      : isInezPresentationHotfix
+        ? `Prepared for ${proposal?.recipientName || "you"}`
+        : accepted
+          ? "Proposal accepted"
+          : `Prepared for ${proposal?.recipientName || "you"}`;
 
   const mutedTextClass = isDarkMode ? "text-white/60" : "text-black/60";
   const subtleTextClass = isDarkMode ? "text-white/45" : "text-black/45";
@@ -289,6 +296,13 @@ export default function ProposalViewer() {
               <div className="font-semibold">Signature submitted</div>
               <div className={`text-sm mt-1 ${mutedTextClass}`}>
                 Your signature was submitted successfully. The completed agreement will be delivered by email when all signatures are finalized.
+              </div>
+            </div>
+          ) : acceptedByOther ? (
+            <div className={`mb-4 border rounded-lg px-4 py-3 ${infoPanelClass}`}>
+              <div className="font-semibold">Proposal already accepted</div>
+              <div className={`text-sm mt-1 ${mutedTextClass}`}>
+                Another authorized recipient accepted this proposal and became the agreement signer. No action is required from you.
               </div>
             </div>
           ) : isInezPresentationHotfix ? (
