@@ -191,7 +191,7 @@ async function ensureContact(sender, name, email) {
       { headers: { 'Content-Type': 'application/json', ...sender.headers.session } }
     );
     if (created?.data?.result?.objectId) return created.data.result;
-  } catch (error) {
+  } catch {
     // A concurrent/previous contact may have won the create. Re-read below.
   }
 
